@@ -1,0 +1,8 @@
+{
+  "name": "Remix: EVIS",
+  "description": "Arquitetura Visual Completa do EVIS - ERP \u0026 CRM para Engenharia e Construção Civil.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

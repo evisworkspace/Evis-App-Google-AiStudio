@@ -1,0 +1,383 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0d1117;
+  --card: #ffffff;
+  --primary: #0066ff;
+  --secondary: #f9fafb;
+  --muted: #57606a;
+  --accent: #00d4ff;
+  --destructive: #ef4444;
+  --border: #e1e4e8;
+  --app-surface: #f9fafb;
+  
+  --color-surface-hex: #ffffff;
+  --color-secondary-hex: #f9fafb;
+  --color-accent-hex: #0066ff;
+  --color-accent-glow-hex: #00d4ff;
+  --color-text-primary-hex: #0d1117;
+  --color-text-secondary-hex: #57606a;
+  --color-success-hex: #22c55e;
+  --color-warning-hex: #f59e0b;
+  --color-danger-hex: #ef4444;
+  
+  --accent-obra: #ff5500;
+  
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-muted: #94a3b8;
+  --sidebar-accent: #0066ff;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-primary: #0066ff;
+  --sidebar-primary-foreground: #ffffff;
+}
+
+:root[data-theme="escuro"] {
+  --background: #0f1419;
+  --foreground: #e8eaed;
+  --card: #151a24;
+  --primary: #00d4ff;
+  --secondary: #1a1f2e;
+  --muted: #9ca3af;
+  --accent: #00f0ff;
+  --destructive: #f87171;
+  --border: #2a3142;
+  --app-surface: #0f1419;
+  
+  --color-surface-hex: #0f1419;
+  --color-secondary-hex: #1a1f2e;
+  --color-accent-hex: #00d4ff;
+  --color-accent-glow-hex: #00f0ff;
+  --color-text-primary-hex: #e8eaed;
+  --color-text-secondary-hex: #9ca3af;
+  --color-success-hex: #10b981;
+  --color-warning-hex: #fbbf24;
+  --color-danger-hex: #f87171;
+  
+  --accent-obra: #ff7722;
+
+  --sidebar: #0b0f15;
+  --sidebar-foreground: #e8eaed;
+  --sidebar-muted: #6b7280;
+  --sidebar-accent: #1e2533;
+  --sidebar-accent-foreground: #00d4ff;
+  --sidebar-border: #1f293d;
+  --sidebar-primary: #00d4ff;
+  --sidebar-primary-foreground: #0b0f15;
+}
+
+:root[data-theme="premium"] {
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --primary: #0071e3;
+  --secondary: #efefef;
+  --muted: #86868b;
+  --accent: #0a84ff;
+  --destructive: #ff3b30;
+  --border: #d2d2d7;
+  --app-surface: #f5f5f7;
+  
+  --color-surface-hex: #f5f5f7;
+  --color-secondary-hex: #efefef;
+  --color-accent-hex: #0071e3;
+  --color-accent-glow-hex: #0a84ff;
+  --color-text-primary-hex: #1d1d1f;
+  --color-text-secondary-hex: #86868b;
+  --color-success-hex: #34c759;
+  --color-warning-hex: #ff9500;
+  --color-danger-hex: #ff3b30;
+  
+  --accent-obra: #ff9500;
+
+  --sidebar: #efefef;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-muted: #86868b;
+  --sidebar-accent: #e5e5ea;
+  --sidebar-accent-foreground: #0071e3;
+  --sidebar-border: #d2d2d7;
+  --sidebar-primary: #0071e3;
+  --sidebar-primary-foreground: #ffffff;
+}
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Consolas, monospace;
+
+  /* Custom HSL Layout Palette */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  
+  --color-app-surface: var(--app-surface);
+  --color-accent-obra: var(--accent-obra);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --radius-lg: 0.75rem; /* rounded-xl (12px) for high-end professional border-radii */
+  --radius-md: calc(0.75rem - 2px);
+  --radius-sm: calc(0.75rem - 4px);
+}
+
+/* Base style tweaks for high-end look and feel */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-app-surface);
+  color: var(--color-foreground);
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+ 
+/* ==========================================
+   PREMIUM CSS KEYFRAMES & UTILITY CLASSES
+   ========================================== */
+@keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+@keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 20px rgba(0, 102, 255, 0); } 50% { box-shadow: 0 0 20px rgba(0, 102, 255, 0.4); } }
+@keyframes countUp { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bounce-in { 0% { opacity: 0; transform: scale(0.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); } }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-shimmer-bg {
+  background: linear-gradient(90deg, var(--color-secondary-hex) 25%, var(--border) 50%, var(--color-secondary-hex) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+/* Scrollbar customization for extreme dense SaaS look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(214 32% 80%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(214 32% 65%);
+}
+
+.custom-grid-line {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ==========================================
+   GLOBAL THEME OVERRIDES (WHOLE APP SHIFT)
+   ========================================== */
+
+/* 1. DARK THEME ("escuro") overrides */
+html[data-theme="escuro"] {
+  color-scheme: dark;
+  
+  /* Layout backgrounds */
+  background-color: var(--color-app-surface) !important;
+  
+  #evis_root_shell {
+    background-color: var(--color-app-surface) !important;
+    color: var(--color-foreground) !important;
+  }
+  
+  /* Cards & Modals */
+  .bg-white, [class*="bg-white/95"], .bg-card {
+    background-color: var(--color-card) !important;
+  }
+  
+  /* Secondary backgrounds, inputs */
+  .bg-slate-50, .bg-zinc-50, .bg-neutral-50, .bg-slate-50\/40, .bg-slate-50\/80 {
+    background-color: var(--color-app-surface) !important;
+  }
+  
+  .bg-slate-100, .bg-zinc-100, .bg-zinc-50\/50, .bg-slate-100\/50 {
+    background-color: var(--color-secondary) !important;
+  }
+
+  /* Dropdown & Form Controls */
+  select, input, textarea, button.bg-zinc-50 {
+    background-color: var(--color-card) !important;
+    color: var(--color-foreground) !important;
+    border-color: var(--color-border) !important;
+  }
+  
+  select option, select option.bg-white {
+    background-color: var(--color-card) !important;
+    color: var(--color-foreground) !important;
+  }
+  
+  /* High contrast text to bright white */
+  .text-zinc-950, .text-zinc-900, .text-zinc-800, .text-slate-900, .text-slate-850, .text-slate-800, .text-neutral-900, .text-black, .text-neutral-950 {
+    color: var(--color-foreground) !important;
+  }
+  
+  /* Mid tones text */
+  .text-zinc-600, .text-zinc-650, .text-zinc-700, .text-slate-700, .text-slate-600, .text-slate-650, .text-neutral-600, .text-neutral-700, .text-zinc-550 {
+    color: hsl(215 20% 78%) !important;
+  }
+  
+  /* Low tones text */
+  .text-zinc-500, .text-slate-500, .text-slate-450, .text-neutral-500, .text-zinc-400 {
+    color: hsl(215 16% 62%) !important;
+  }
+  
+  /* Borders */
+  .border-zinc-150, .border-slate-150, .border-zinc-200, .border-slate-200, .border-zinc-300, .border-slate-300, .border-zinc-100, .border-slate-100 {
+    border-color: var(--color-border) !important;
+  }
+  
+  /* Ambient Grid Lines */
+  .custom-grid-line {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px) !important;
+  }
+  
+  /* Table headers and borders */
+  th {
+    background-color: var(--color-secondary) !important;
+    color: hsl(215 20% 75%) !important;
+    border-color: var(--color-border) !important;
+  }
+  td {
+    border-color: var(--color-border) !important;
+  }
+  
+  /* Special alert elements (e.g. blue weather status and warnings) */
+  .bg-blue-50 {
+    background-color: hsl(222 47% 10%) !important;
+    border-color: hsl(221 83% 20%) !important;
+  }
+  .text-blue-900 {
+    color: hsl(217 91% 85%) !important;
+  }
+  .text-blue-800, .text-blue-700, .text-blue-600 {
+    color: hsl(217 91% 75%) !important;
+  }
+  
+  .bg-amber-50, .bg-amber-50\/50 {
+    background-color: hsl(30 30% 9%) !important;
+    border-color: hsl(30 80% 18%) !important;
+  }
+  .text-amber-900 {
+    color: hsl(40 85% 80%) !important;
+  }
+  .text-amber-800, .text-amber-700, .text-amber-600 {
+    color: hsl(40 85% 72%) !important;
+  }
+  
+  .bg-emerald-50, .bg-emerald-50\/50 {
+    background-color: hsl(140 30% 8%) !important;
+    border-color: hsl(140 80% 16%) !important;
+  }
+  .text-emerald-900 {
+    color: hsl(140 80% 80%) !important;
+  }
+  .text-emerald-800, .text-emerald-700, .text-emerald-600 {
+    color: hsl(140 80% 72%) !important;
+  }
+
+  .bg-rose-50, .bg-rose-100 {
+    background-color: hsl(355 40% 10%) !important;
+    border-color: hsl(355 80% 20%) !important;
+  }
+  .text-rose-900 {
+    color: hsl(355 80% 85%) !important;
+  }
+  .text-rose-850, .text-rose-800, .text-rose-700, .text-rose-600 {
+    color: hsl(355 80% 75%) !important;
+  }
+
+  /* Dialog close buttons & actions */
+  .text-zinc-450 {
+    color: hsl(215 16% 62%) !important;
+  }
+  
+  /* Scrollbars in Dark Theme */
+  ::-webkit-scrollbar-thumb {
+    background: hsl(215 15% 25%) !important;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(215 15% 35%) !important;
+  }
+}
+
+/* 2. APPLE PREMIUM THEME ("premium") overrides */
+html[data-theme="premium"] {
+  /* Apple / Cupertino-style silver matte */
+  background-color: var(--color-app-surface) !important;
+  
+  #evis_root_shell {
+    background-color: var(--color-app-surface) !important;
+    color: var(--color-foreground) !important;
+  }
+  
+  .bg-white, .bg-card {
+    background-color: var(--color-card) !important;
+  }
+  
+  /* Layout backgrounds */
+  .bg-slate-50, .bg-zinc-50, .bg-neutral-50, .bg-slate-50\/40, .bg-slate-50\/80 {
+    background-color: var(--color-app-surface) !important;
+  }
+
+  /* Thin Cupertino Hairline Borders */
+  .border {
+    border-width: 1px !important;
+  }
+  .border-zinc-150, .border-slate-150, .border-zinc-200, .border-slate-200, .border-zinc-300, .border-slate-300, .border-zinc-100, .border-slate-100 {
+    border-color: var(--color-border) !important;
+  }
+  
+  /* Soft rounded controls */
+  select, input, textarea {
+    border-radius: 8px !important;
+    border-color: var(--color-border) !important;
+    background-color: var(--color-card) !important;
+  }
+}
