@@ -87,7 +87,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const [theme, setThemeState] = useState<AppTheme>(() => {
     const saved = localStorage.getItem("evis_theme") as AppTheme;
-    return saved === "claro" || saved === "escuro" || saved === "premium" ? saved : "claro";
+    return saved === "claro" || saved === "escuro" || saved === "hibrido" ? saved : "claro";
   });
 
   useEffect(() => {
