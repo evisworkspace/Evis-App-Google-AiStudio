@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "../lib/auth";
+import { createCompany } from "../services/companyService";
 import {
   Obra,
   Oportunidade,
@@ -30,6 +31,10 @@ export interface Toast {
 interface AppContextType {
   currentUser: User | null;
   authLoading: boolean;
+  companyId: string | null;
+  setCompanyId: (id: string | null) => void;
+  needsOnboarding: boolean;
+  setNeedsOnboarding: (v: boolean) => void;
 
   // Navigation & Shell Layout
   sidebarOpen: boolean;
@@ -38,12 +43,12 @@ interface AppContextType {
   setCurrentRoute: (route: MenuRoute) => void;
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
-  
+
   // Active states
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
   getActiveProject: () => Obra;
-  
+
   // Core Business entities
   obras: Obra[];
   setObras: React.Dispatch<React.SetStateAction<Obra[]>>;
@@ -80,11 +85,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [companyId, setCompanyId] = useState<string | null>(
+    () => localStorage.getItem("evis_company_id")
+  );
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentRoute, setCurrentRoute] = useState<MenuRoute>("dashboard");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("ob_1");
   const [activeSubTab, setActiveSubTab] = useState<string>("geral");
-  
+
   const [theme, setThemeState] = useState<AppTheme>(() => {
     const saved = localStorage.getItem("evis_theme") as AppTheme;
     return saved === "claro" || saved === "escuro" || saved === "hibrido" ? saved : "claro";
@@ -102,6 +111,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setNeedsOnboarding(false);
+      return;
+    }
+    const stored = localStorage.getItem("evis_company_id");
+    if (stored) {
+      setCompanyId(stored);
+      setNeedsOnboarding(false);
+    } else {
+      setNeedsOnboarding(true);
+    }
+  }, [currentUser]);
 
   const setTheme = (t: AppTheme) => {
     setThemeState(t);
@@ -249,6 +272,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         currentUser,
         authLoading,
+        companyId,
+        setCompanyId,
+        needsOnboarding,
+        setNeedsOnboarding,
         sidebarOpen,
         setSidebarOpen,
         currentRoute,

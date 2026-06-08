@@ -13,9 +13,11 @@ import AdminView from "./components/modules/AdminView";
 import EvisChat from "./components/assistente/EvisChat";
 import ToastContainer from "./components/layout/ToastContainer";
 import { motion, AnimatePresence } from "motion/react";
+import AuthScreen from "./components/layout/AuthScreen";
+import OnboardingScreen from "./components/layout/OnboardingScreen";
 
 function AppContent() {
-  const { currentRoute, sidebarOpen, navigate } = useApp();
+  const { currentRoute, sidebarOpen, navigate, currentUser, authLoading, needsOnboarding, setCompanyId, setNeedsOnboarding } = useApp();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -75,6 +77,27 @@ function AppContent() {
     }
     return <DashboardView />;
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <span className="animate-spin h-8 w-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full"></span>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  if (needsOnboarding && currentUser) {
+    return (
+      <OnboardingScreen
+        user={currentUser}
+        onComplete={(id) => { setCompanyId(id); setNeedsOnboarding(false); }}
+      />
+    );
+  }
 
   return (
     <div id="evis_root_shell" className="h-screen bg-app-surface flex text-foreground overflow-hidden antialiased font-sans transition-colors duration-200">
