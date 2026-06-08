@@ -19,7 +19,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
   // Orçamentista IA Chat States (moved exactly from ObrasView)
   const [isOrcamentistaOpen, setIsOrcamentistaOpen] = useState(false);
   const [orcMsg, setOrcMsg] = useState<Array<{ role: "user" | "assistant"; content: string; itens?: any[] }>>([
-    { role: "assistant", content: "Olá! Sou o Orçamentista IA da Curitiba Construtora. Estou pronto para analisar as frentes de insumos desta pré-obra e te dar orientações de compra balizadas pelo SINAPI. Clique nos botões rápidos abaixo ou me faça uma pergunta!" }
+    { role: "assistant", content: "Olá! Sou o Otto Orçamentista da Curitiba Construtora. Estou pronto para analisar as frentes de insumos desta pré-obra e te dar orientações de compra balizadas pelo SINAPI. Itens com baixa confiança serão sinalizados para revisão manual!" }
   ]);
   const [orcInput, setOrcInput] = useState("");
   const [isQueryingOrc, setIsQueryingOrc] = useState(false);
@@ -118,7 +118,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
         emailBody
       );
 
-      showToast(`Email enviado com sucesso via Gmail para ${meetClientEmail}!`, "success");
+      showToast(`Ambiente simulado: Nenhuma ação real. Email (simulado) para ${meetClientEmail}`, "success");
       setShowEmailModal(false);
     } catch (e: any) {
       showToast(`Erro ao enviar email: ${e.message}`, "error");
@@ -159,7 +159,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
       );
 
       const meetLink = data.hangoutLink;
-      showToast(attendees.length > 0 ? `Meet agendado e email de convite enviado! Link: ${meetLink}` : `Meet agendado! Link: ${meetLink}`, "success");
+      showToast(`Ambiente simulado: Nenhuma ação real. Agenda e Convite (Simulado)`, "success");
       setShowMeetModal(false);
     } catch (e: any) {
       showToast(`Erro ao agendar reunião: ${e.message}`, "error");
@@ -177,7 +177,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
          try {
             const folderData = await createGoogleDriveFolder(token, `EVIS Projeto Técnico - ${oportunidade.title}`);
             driveFolderInfo = `Pasta GDrive vinculada.\nID: ${folderData.id}`;
-            showToast(`Pasta Oportunidade criada no Drive!`, "success");
+            showToast(`Ambiente simulado: Nenhuma ação real. Pasta simulada.`, "success");
          } catch(e: any) {
             console.error(e);
             showToast(`Atenção: Não criou pasta Drive. ${e.message}`, "info");
@@ -206,7 +206,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
       
       setObras(prev => [...prev, novaObra]);
       setOportunidades(prev => prev.filter(o => o.id !== oportunidade.id));
-      showToast(`Oportunidade "${oportunidade.title}" agora é uma Obra Oficial!`, "success");
+      showToast(`Ambiente simulado: "${oportunidade.title}" virou obra no sistema.`, "success");
       onBack();
     } finally {
       setIsConverting(false);
@@ -292,6 +292,31 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
       {/* Content Areas */}
       {activeTab === "geral" && (
         <div className="space-y-4">
+          {/* Lia Comercial Suggestion Card */}
+          <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/40 rounded-lg p-5 shadow-sm">
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-purple-800 dark:text-purple-400 mb-2 flex items-center gap-2">
+               <Sparkles className="h-4 w-4" /> Lia Comercial (Assistente CRM)
+            </h3>
+            <p className="text-sm font-semibold text-purple-950 dark:text-purple-100">
+               Este lead parece quente porque demonstrou urgência e pediu retorno rápido. Posso preparar um briefing para orçamento, mas você confirma antes.
+            </p>
+            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+               Temperatura do Lead: {oportunidade.probability < 50 ? "Baixa (Risco de Perda)" : oportunidade.probability < 80 ? "Moderada" : "Alta (Quente)"}. Sugiro contato em até 24 horas.
+            </p>
+            <div className="mt-4 flex gap-3">
+               <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all cursor-pointer shadow-sm"
+                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+               >
+                 Preparar briefing para orçamento
+               </button>
+               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 transition-all cursor-pointer shadow-sm"
+                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+               >
+                 Ver contexto de risco da conta
+               </button>
+            </div>
+          </div>
+
           <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 mb-4">Dados da Obra</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -332,6 +357,29 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
 
       {activeTab === "orcamento" && (
         <div className="space-y-6">
+           {/* Otto Orçamentista Insights */}
+           <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-lg border border-emerald-200 dark:border-emerald-900/40 mb-2 relative shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                 <Sparkles className="h-4 w-4 text-emerald-600" />
+                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                    Otto Orçamentista (Assistente de Custos)
+                 </h3>
+              </div>
+              <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100 mb-3 leading-relaxed">
+                 Há lacunas no escopo que podem afetar o preço final (ex: falta prever infraestrutura de refrigeração para todas as salas). <br/>
+                 Este item tem baixa confiança e precisa de revisão humana: <strong>Fundação profunda — Cotação parametrizada (margem de erro de 20%)</strong>. <br/>
+                 Orçamento final exige aprovação do responsável.
+              </p>
+              <div className="flex gap-3">
+                 <button onClick={() => setIsOrcamentistaOpen(!isOrcamentistaOpen)} className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   Ativar Simulador de Custos
+                 </button>
+                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   Enviar perguntas pendentes ao cliente
+                 </button>
+              </div>
+           </div>
+
           <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
              <div className="flex items-center justify-between border-b border-zinc-100 pb-3 flex-wrap gap-4">
                 <div>
@@ -440,7 +488,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               <Sparkles className="h-4 w-4 text-emerald-400" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-zinc-900 leading-tight">Orçamentista IA</h4>
+              <h4 className="text-sm font-bold text-zinc-900 leading-tight">Otto Orçamentista</h4>
               <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-500">Agente de Pré-Obra</span>
             </div>
           </div>
@@ -463,7 +511,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               }`}
             >
               <p className="font-semibold text-[9.5px] font-mono opacity-60 tracking-wider mb-1">
-                {m.role === "user" ? "Berti (Você)" : "Agente Orçamentista"}
+                {m.role === "user" ? "Berti (Você)" : "Otto Orçamentista"}
               </p>
               <p className="whitespace-pre-line text-sm font-medium leading-relaxed">
                 {m.content}

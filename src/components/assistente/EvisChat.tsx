@@ -1,37 +1,215 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, User, Send, X, MessageSquare, CornerDownLeft, Sparkles, Building2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { 
+  Bot, User, Send, X, MessageSquare, CornerDownLeft, Sparkles, Building2, 
+  AlertTriangle, ShieldCheck, CheckCircle2, FileText, Info, ArrowLeft, 
+  Briefcase, ShieldAlert, Users, Calculator, Clock, ClipboardList, 
+  ShoppingCart, Boxes, DollarSign, PieChart, Calendar, Zap, Circle
+} from "lucide-react";
 import { useApp } from "../../context/AppContext";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  time: string;
+import { getAgentProfile } from "../../utils/agentesConfig";
+
+export type AgentMessageStatus = "nova" | "lida" | "pendente" | "resolvida" | "simulada";
+export type ChatScope = "Global" | "Obra";
+
+export interface AgentMessage {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentRole: string;
+  obraId?: string;
+  obraName?: string;
+  scope: ChatScope;
+  module: string;
+  severity: "info" | "warning" | "critical" | "success";
+  title: string;
+  message: string;
+  evidence?: string[];
+  suggestedActions: { label: string; actionStr: string; type: "primary" | "secondary" }[];
+  requiresHumanApproval: boolean;
+  status: AgentMessageStatus;
+  createdAt: string;
+  isUser?: boolean;
 }
 
 export default function EvisChat() {
-  const { getActiveProject, setCurrentRoute, setSelectedProjectId, setActiveSubTab, showToast } = useApp();
+  const { getActiveProject, setCurrentRoute, setSelectedProjectId, activeRoute, showToast } = useApp();
   const activeProj = getActiveProject();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: `Olá, Engenheiro Berti! Sou o EVIS (Sua Inteligência de Obras).
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  
+  const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
 
-Como especialista em controle físico-financeiro da Curitiba Construtora, estou munido com os dados do projeto ${activeProj.name} (${activeProj.location}).
 
-Posso ajudar com:
-- Análise de margem e orçamentos SINAPI.
-- Elaboração rápida do texto do RDO de acordo com as condições meteorológicas em Curitiba.
-- Identificação de potenciais desvios financeiros ou atrasos na concretagem.
+  // Carrega mensagens simuladas apenas uma vez para a obra ativa
+  useEffect(() => {
+    const initialMessages: AgentMessage[] = [
+      // MENSAGENS GLOBAIS / PORTFOLIO
+      {
+        id: `msg_global_eva`,
+        agentId: "ag-eva",
+        agentName: "EVA",
+        agentRole: "EVA Executiva",
+        scope: "Global",
+        module: "Resumo",
+        severity: "info",
+        title: "Resumo do Portfólio",
+        message: "O projeto Residencial Kairo concentra o maior nível de risco operacional hoje. Tenho 3 decisões aguardando sua chancela.",
+        suggestedActions: [
+          { label: "Ver decisões globais", actionStr: "ver_decisoes", type: "primary" }
+        ],
+        requiresHumanApproval: false,
+        status: "nova",
+        createdAt: "08:00"
+      },
+      {
+        id: `msg_global_sentinela`,
+        agentId: "ag-sentinela",
+        agentName: "Sentinela",
+        agentRole: "Sentinela de Riscos",
+        scope: "Global",
+        module: "Riscos",
+        severity: "critical",
+        title: "Risco Detalhado - Batel Tower",
+        message: "Houve emissão atípica de SC para Aço CA-50 no Batel Tower, ultrapassando a curva S provável e os referenciais SINAPI.",
+        evidence: ["SC #10294 para Aço CA-50 excedeu limite mensal", "Histórico de orçamento Batel Tower"],
+        suggestedActions: [
+          { label: "Acionar Nina Compras", actionStr: "acionar_nina", type: "primary" },
+          { label: "Simular mitigação", actionStr: "plano_mitigacao", type: "secondary" }
+        ],
+        requiresHumanApproval: true,
+        status: "nova",
+        createdAt: "08:15"
+      },
+      {
+        id: `msg_global_vera`,
+        agentId: "ag-vera",
+        agentName: "Vera",
+        agentRole: "Vera Financeira",
+        scope: "Global",
+        module: "Financeiro",
+        severity: "warning",
+        title: "Alerta de Vencimento Cruzado",
+        message: "O fluxo de caixa consolidado aponta saídas críticas amanhã (R$ 84.000). A maior fatia é fornecedor Votorantim.",
+        suggestedActions: [
+          { label: "Ver fluxo consolidado", actionStr: "ver_resumo_financeiro", type: "primary" }
+        ],
+        requiresHumanApproval: false,
+        status: "nova",
+        createdAt: "09:00"
+      }
+    ];
 
-O que deseja analisar hoje?`,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ]);
+    if (activeProj) {
+      initialMessages.push(
+        {
+          id: `msg_obra_nina_${activeProj.id}`,
+          agentId: "ag-nina",
+          agentName: "Nina",
+          agentRole: "Nina Compras",
+          scope: "Obra",
+          obraId: activeProj.id,
+          obraName: activeProj.name,
+          module: "Compras",
+          severity: "warning",
+          title: "Insumo Crítico da Obra",
+          message: "Precisamos fechar a cotação do Cimento CP-II hoje para esta obra, caso contrário a concretagem atrasará.",
+          suggestedActions: [
+            { label: "Preparar cotação", actionStr: "preparar_cotacao", type: "primary" },
+            { label: "Comparar fornecedores", actionStr: "comparar_fornecedores", type: "secondary" }
+          ],
+          requiresHumanApproval: true,
+          status: "nova",
+          createdAt: "10:30"
+        },
+        {
+          id: `msg_obra_dora_${activeProj.id}`,
+          agentId: "ag-dora",
+          agentName: "Dora",
+          agentRole: "Dora Documentos",
+          scope: "Obra",
+          obraId: activeProj.id,
+          obraName: activeProj.name,
+          module: "Documentos",
+          severity: "warning",
+          title: "Documentos Sensíveis Aguardando",
+          message: "Recebi 4 anexos de fiscais da prefeitura nesta obra. Classificação sugerida exige sua confirmação por sigilo.",
+          suggestedActions: [
+            { label: "Classificar documentos", actionStr: "classificar_docs", type: "primary" },
+            { label: "Ver anexos da obra", actionStr: "ver_anexos", type: "secondary" }
+          ],
+          requiresHumanApproval: true,
+          status: "nova",
+          createdAt: "11:00"
+        },
+        {
+          id: `msg_obra_diario_${activeProj.id}`,
+          agentId: "ag-diario",
+          agentName: "Diário",
+          agentRole: "Diário de Obra IA",
+          scope: "Obra",
+          obraId: activeProj.id,
+          obraName: activeProj.name,
+          module: "RDO",
+          severity: "warning",
+          title: "RDO Pendente - Mestre de Obras",
+          message: "A apropriação de horas e o clima de ontem ainda não foram formalizados no RDO. Posso gerar o rascunho com os dados passados pelo mestre no áudio?",
+          suggestedActions: [
+            { label: "Gerar rascunho do RDO", actionStr: "gerar_rdo", type: "primary" }
+          ],
+          requiresHumanApproval: true,
+          status: "nova",
+          createdAt: "11:45"
+        },
+        {
+          id: `msg_obra_agenda_${activeProj.id}`,
+          agentId: "ag-agenda",
+          agentName: "Agenda",
+          agentRole: "Agenda Inteligente",
+          scope: "Obra",
+          obraId: activeProj.id,
+          obraName: activeProj.name,
+          module: "Agenda",
+          severity: "warning",
+          title: "Conflito de Cronograma",
+          message: "Há um conflito de vistoria (12h-14h) com a entrega de concreto nesta frente de serviço.",
+          suggestedActions: [
+            { label: "Sugerir novo horário", actionStr: "sugerir_horario", type: "primary" },
+            { label: "Confirmar reagendamento simulado", actionStr: "reagendar", type: "secondary" }
+          ],
+          requiresHumanApproval: true,
+          status: "nova",
+          createdAt: "13:00"
+        }
+      );
+    }
+    setAgentMessages(initialMessages);
+  }, [activeProj?.id]);
+
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      setIsOpen(true);
+      if (e.detail?.agentRole) {
+         const role = e.detail.agentRole as string;
+         // Find matching agentId based on role to open directly
+         if (role.includes("Sentinela")) setActiveChatId("ag-sentinela");
+         else if (role.includes("Financeira")) setActiveChatId("ag-vera");
+         else if (role.includes("Compras")) setActiveChatId("ag-nina");
+         else if (role.includes("Dora")) setActiveChatId("ag-dora");
+         else if (role.includes("Agenda")) setActiveChatId("ag-agenda");
+         else if (role.includes("Diário") || role.includes("RDO")) setActiveChatId("ag-diario");
+         else if (role.includes("EVA")) setActiveChatId("ag-eva");
+         else setActiveChatId(null);
+      } else {
+         setActiveChatId(null);
+      }
+    };
+    window.addEventListener("open-maestro", handler as EventListener);
+    return () => window.removeEventListener("open-maestro", handler as EventListener);
+  }, []);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,136 +217,130 @@ O que deseja analisar hoje?`,
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen]);
+  }, [agentMessages, isOpen, activeChatId]);
 
-  const handleSend = async (textToSend: string) => {
-    if (!textToSend.trim() || isLoading) return;
+  const handleAction = (actionStr: string, msgId: string) => {
+    showToast(`Ambiente simulado: Ação confirmada via Hub. Nenhuma rotina real acionada.`, "success");
+    setAgentMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "simulada" } : m));
+  };
 
-    const userMsg: Message = {
-      role: "user",
-      content: textToSend,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  const [messageInput, setMessageInput] = useState("");
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageInput.trim() || !activeChatId) return;
+
+    const activeAgent = agentMessages.find(m => m.agentId === activeChatId);
+    if (!activeAgent) return;
+
+    const newMessage: AgentMessage = {
+      id: `usr_msg_${Date.now()}`,
+      agentId: activeChatId,
+      agentName: activeAgent.agentName,
+      agentRole: activeAgent.agentRole,
+      scope: activeAgent.scope,
+      module: activeAgent.module,
+      severity: "info",
+      title: "",
+      message: messageInput,
+      suggestedActions: [],
+      requiresHumanApproval: false,
+      status: "lida",
+      createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isUser: true
     };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsLoading(true);
+    setAgentMessages(prev => [...prev, newMessage]);
+    setMessageInput("");
+    setIsTyping(true);
 
-    try {
-      const response = await fetch("/api/ai/assistente", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, userMsg].map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          siteContext: `${activeProj.name} - Status Atual: ${activeProj.status}, Orçamento Total: R$ ${activeProj.budgetTotal.toLocaleString()}, Gasto Real: R$ ${activeProj.budgetSpent.toLocaleString()}, Progresso: ${activeProj.progress}%`,
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        const replyText = data.reply || data.content || "Como assistente, não possuo respostas para este comando.";
-        
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: replyText,
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
-
-        // Automatically trigger programmatical page and tab redirection
-        if (data.type === "redirect_diario" && data.idRefurbish) {
-          setSelectedProjectId(data.idRefurbish);
-          setCurrentRoute("obras");
-          setActiveSubTab("rdo");
-          showToast(`Redirecionando para o Diário de Obra (RDO) da obra selecionada.`, "info");
-        } else if (data.type === "redirect_orcamentista" && data.idRefurbish) {
-          setSelectedProjectId(data.idRefurbish);
-          setCurrentRoute("obras");
-          setActiveSubTab("orcamento");
-          showToast(`Redirecionando para o painel Orçamentista IA da obra selecionada.`, "info");
-        }
-      } else {
-        throw new Error(data.error || "Desconhecido");
-      }
-    } catch (err: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `❌ OPS, HOUVE UM ERRO AO CONECTAR AO SERVIDOR DO ASSISTENTE LIA.
-Detalhes do erro: ${err.message}.
-
-Por favor, tente novamente de forma offline ou verifique se a sua chave de API está ativa.`,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const suggestionChips = [
-    { label: "Análise Orçamento", prompt: `Analise as margens do orçamento de ${activeProj.name}. Onde temos maiores riscos de estourar?` },
-    { label: "Texto RDO Chuva", prompt: `Escreva um registro de RDO profissional para ${activeProj.name} considerando clima chuvoso em Curitiba e trabalho concentrado em alvenaria interna.` },
-    { label: "Substitutos de Aço", prompt: `Estamos com cotações pendentes de aço CA-50 em barras de 10mm. Quais as melhores práticas em Curitiba para fechar compras urgentes com boa margem frente à tabela SINAPI?` },
-  ];
-
-  // Simple and highly robust inline helper to format bolding, code blocks and lists in markdown
-  const formatMarkdown = (text: string) => {
-    return text.split("\n").map((line, idx) => {
-      let content = line;
+    // Simulated Gemini AI Response Framework
+    setTimeout(() => {
+      const simulatedResponse: AgentMessage = {
+        id: `ai_msg_${Date.now()}`,
+        agentId: activeChatId,
+        agentName: activeAgent.agentName,
+        agentRole: activeAgent.agentRole,
+        scope: activeAgent.scope,
+        module: activeAgent.module,
+        severity: "success",
+        title: "Raciocínio IA Concluído",
+        message: `(Simulação Gemini) Analisei a sua solicitação. Como estamos em ambiente simulado, eu processaria este cenário verificando o contexto atual de "${activeAgent.module}". Confirma a intenção de seguir com esta operação?`,
+        suggestedActions: [
+          { label: "Confirmar Simulação", actionStr: "confirmar_simulacao_gemini", type: "primary" }
+        ],
+        requiresHumanApproval: true,
+        status: "nova",
+        createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        isUser: false
+      };
       
-      // Headers
-      if (content.startsWith("### ")) {
-        return <h4 key={idx} className="text-zinc-900 font-semibold text-sm mt-3 mb-1">{content.replace("### ", "")}</h4>;
-      }
-      if (content.startsWith("## ")) {
-        return <h3 key={idx} className="text-zinc-900 font-bold text-base mt-4 mb-2 border-b border-zinc-100 pb-1">{content.replace("## ", "")}</h3>;
-      }
-      if (content.startsWith("# ")) {
-        return <h2 key={idx} className="text-zinc-900 font-bold text-lg mt-4 mb-2">{content.replace("# ", "")}</h2>;
-      }
-
-      // Bullet points
-      if (content.trim().startsWith("- ")) {
-        return (
-          <li key={idx} className="ml-4 list-disc text-xs text-zinc-700 leading-relaxed mb-1">
-            {parseInlineMarkdown(content.trim().substring(2))}
-          </li>
-        );
-      }
-
-      return (
-        <p key={idx} className="text-xs text-zinc-700 leading-relaxed mb-2 font-sans">
-          {parseInlineMarkdown(content)}
-        </p>
-      );
-    });
+      setAgentMessages(prev => [...prev, simulatedResponse]);
+      setIsTyping(false);
+    }, 2000);
   };
 
-  const parseInlineMarkdown = (line: string) => {
-    // Basic Markdown helper for bold **text** and code `codes`
-    const regex = /(\*\*.*?\*\*|`.*?`)/g;
-    const parts = line.split(regex);
-    return parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={i} className="font-semibold text-zinc-950">{part.slice(2, -2)}</strong>;
-      }
-      if (part.startsWith("`") && part.endsWith("`")) {
-        return <code key={i} className="bg-zinc-100 text-amber-700 font-mono text-[10px] px-1 py-0.5 rounded-sm">{part.slice(1, -1)}</code>;
-      }
-      return part;
+
+  // Prepare threads for List View
+  const agentsWithMessages = useMemo(() => {
+    const map = new Map<string, AgentMessage[]>();
+    // Filter messages by current active route context
+    // If we are on a global dashboard, show everything or specific global ones.
+    // Let's simplify: show global messages + messages for active project.
+    
+    agentMessages.forEach(m => {
+       if (m.scope === "Obra" && m.obraId !== activeProj?.id) return; // Skip if it's for another project
+       
+       if (!map.has(m.agentId)) {
+         map.set(m.agentId, []);
+       }
+       map.get(m.agentId)!.push(m);
     });
+    return Array.from(map.values()).map(msgs => {
+       // Sort by date (mock sorted for now)
+       return {
+         agentId: msgs[0].agentId,
+         agentName: msgs[0].agentName,
+         agentRole: msgs[0].agentRole,
+         messages: msgs,
+         lastMessage: msgs[msgs.length - 1]
+       };
+    });
+  }, [agentMessages, activeProj?.id]);
+
+  useEffect(() => {
+    if (activeChatId) {
+      setAgentMessages(prev => prev.map(m => {
+        if (m.agentId === activeChatId && m.status === "nova") {
+          return { ...m, status: "lida" };
+        }
+        return m;
+      }));
+    }
+  }, [activeChatId]);
+
+  const activeThread = useMemo(() => {
+     if (!activeChatId) return null;
+     return agentMessages.filter(m => m.agentId === activeChatId && (m.scope === "Global" || m.obraId === activeProj?.id));
+  }, [activeChatId, agentMessages, activeProj?.id]);
+
+  const activeAgentMeta = useMemo(() => {
+     if (!activeThread || activeThread.length === 0) return null;
+     const first = activeThread[0];
+     return { name: first.agentName, role: first.agentRole, id: first.agentId };
+  }, [activeThread]);
+
+  const getSeverityColor = (sev: string) => {
+    switch (sev) {
+      case "critical": return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+      case "warning": return "text-amber-500 bg-amber-500/10 border-amber-500/20";
+      case "success": return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+      default: return "text-blue-500 bg-blue-500/10 border-blue-500/20";
+    }
   };
 
   return (
     <>
-      {/* Floating Trigger Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -180,18 +352,16 @@ Por favor, tente novamente de forma offline ou verifique se a sua chave de API e
           ) : (
             <MessageSquare className="h-6 w-6 text-slate-105" />
           )}
-          {/* Animated dot glow */}
           <span className="absolute -top-1 -right-1 flex h-4 w-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-4 w-4 bg-indigo-500 border-2 border-white"></span>
           </span>
           <span className="absolute right-16 bg-slate-900 border border-slate-750 text-white font-mono text-[10px] tracking-wide px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap shadow-xl">
-            Falar com EVIS AI
+            Maestro Operacional
           </span>
         </button>
       </div>
 
-      {/* Expandable Sidebar Assistant Container */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -200,28 +370,55 @@ Por favor, tente novamente de forma offline ou verifique se a sua chave de API e
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed bottom-24 right-6 z-50 w-full max-w-sm md:max-w-md h-[580px] bg-white/95 backdrop-blur-xl rounded-2xl shadow-3xl border border-slate-200/80 overflow-hidden flex flex-col"
+            className="fixed bottom-24 right-6 z-50 w-full max-w-sm md:max-w-md h-[600px] bg-slate-50 backdrop-blur-xl rounded-2xl shadow-3xl border border-slate-200/80 overflow-hidden flex flex-col"
           >
-            {/* Assistant Header */}
+            {/* Assistant Header - Dynamic */}
             <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 px-4 py-4 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 bg-indigo-650 border border-indigo-500/30 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10">
-                  <Bot className="h-5 w-5 text-indigo-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-bold text-xs leading-none tracking-tight">
-                      EVIS AI Manager
-                    </span>
-                    <span className="inline-flex items-center h-4 px-1.5 rounded-full bg-emerald-950/80 text-[8px] font-mono font-black tracking-widest text-emerald-400 border border-emerald-500/20">
-                      <span className="h-1 w-1 bg-emerald-400 rounded-full mr-1 animate-pulse"></span>
-                      ONLINE
-                    </span>
+                {activeChatId ? (
+                   <button onClick={() => setActiveChatId(null)} className="h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300 transition-colors cursor-pointer mr-1">
+                      <ArrowLeft className="h-5 w-5" />
+                   </button>
+                ) : (
+                  <div className="h-9 w-9 bg-indigo-650 border border-indigo-500/30 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10 shrink-0">
+                    <Bot className="h-5 w-5 text-indigo-400" />
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1 font-mono flex items-center gap-1">
-                    <Building2 className="h-3 w-3 text-amber-500" /> Inteligência Curitiba Construtora
-                  </p>
-                </div>
+                )}
+                
+                {activeChatId && activeAgentMeta ? (
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center text-indigo-400 shadow-md">
+                      {React.createElement(getAgentProfile(activeAgentMeta.id).icon, { className: "h-4.5 w-4.5" })}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-bold text-xs leading-none tracking-tight">
+                          {activeAgentMeta.name}
+                        </span>
+                        <span className="inline-flex items-center h-4 px-1.5 rounded-full bg-emerald-950/80 text-[8px] font-mono font-black tracking-widest text-emerald-400 border border-emerald-500/20">
+                           <Circle className="h-1.5 w-1.5 mr-1 fill-emerald-400 text-emerald-400" /> Online
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-mono flex items-center gap-1">
+                        {activeAgentMeta.role}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-xs leading-none tracking-tight">
+                        Mensagens dos Agentes
+                      </span>
+                      <span className="inline-flex items-center h-4 px-1.5 rounded-full bg-indigo-950/80 text-[8px] font-mono font-black tracking-widest text-indigo-400 border border-indigo-500/20">
+                        {agentsWithMessages.length} NOVAS
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono flex items-center gap-1">
+                      <Building2 className="h-3 w-3 text-amber-500" /> Hub Central • EVIS
+                    </p>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -231,140 +428,192 @@ Por favor, tente novamente de forma offline ou verifique se a sua chave de API e
               </button>
             </div>
 
-            {/* Active Context Banner - Inline representative Card */}
-            <div className="px-4 py-3 bg-secondary/60 border-b border-border flex items-center justify-between gap-3 shadow-inner">
-              <div className="flex items-center gap-2 max-w-[70%]">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                  <Building2 className="h-4.5 w-4.5 animate-pulse" />
-                </div>
-                <div className="truncate">
-                  <p className="text-[8px] font-mono font-bold tracking-wider text-muted uppercase">Análise em tempo real</p>
-                  <p className="text-[11px] font-bold text-foreground truncate">{activeProj.name}</p>
-                </div>
-              </div>
-              <div className="text-right shrink-0">
-                <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                  {activeProj.progress}% Executado
-                </span>
-              </div>
-            </div>
-
-            {/* Messages Feed Area */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 bg-secondary/20 space-y-4 font-sans">
-              {messages.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.95, y: 12 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ duration: 0.22, ease: "easeOut" }}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div className={`flex gap-2.5 w-full max-w-[88%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                    <div
-                      className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border shadow-xs ${
-                        m.role === "user"
-                          ? "bg-gradient-to-tr from-primary to-accent border-primary/30 text-white shadow-md shadow-primary/10"
-                          : "bg-card border-border text-primary"
-                      }`}
-                    >
-                      {m.role === "user" ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+            {/* Content Area */}
+            {!activeChatId ? (
+              // --- LIST VIEW ---
+              <div className="flex-1 overflow-y-auto bg-slate-50 relative">
+                 <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center justify-between gap-3 shadow-sm z-10 sticky top-0">
+                    <div className="flex items-center gap-2 max-w-[80%]">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                        {activeRoute === "dashboard" || activeRoute === "oportunidades" ? <Sparkles className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                      </div>
+                      <div className="truncate">
+                        <p className="text-[8px] font-mono font-bold tracking-wider text-slate-500 uppercase">Filtro de Contexto Ativo</p>
+                        <p className="text-[11px] font-bold text-slate-800 truncate">
+                          {activeRoute === "dashboard" || activeRoute === "oportunidades" ? "Visão Global / Portfólio" : activeProj?.name}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <div
-                        className={`px-3 py-2.5 rounded-xl border leading-relaxed text-xs shadow-xs ${
-                          m.role === "user"
-                            ? "bg-gradient-to-br from-indigo-600 to-indigo-800 text-white border-indigo-700 shadow-md shadow-indigo-600/10"
-                            : "bg-card border-border text-foreground"
-                        }`}
+                 </div>
+                 
+                 <div className="p-2 space-y-1">
+                   {agentsWithMessages.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center h-40 text-slate-400">
+                        <div className="h-10 w-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center mb-2">
+                          <CheckCircle2 className="h-5 w-5 text-slate-400" />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nenhuma mensagem</span>
+                     </div>
+                   ) : (
+                     agentsWithMessages.map(thread => (
+                        <button
+                          key={thread.agentId}
+                          onClick={() => setActiveChatId(thread.agentId)}
+                          className="w-full border-b border-slate-100 last:border-0 p-3 hover:bg-indigo-50/50 transition-colors cursor-pointer flex items-start gap-3 rounded-xl hover:shadow-xs group text-left"
+                        >
+                           <div className="relative shrink-0">
+                              <div className="h-11 w-11 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 group-hover:text-indigo-600 group-hover:border-indigo-200 shadow-sm transition-colors">
+                                 {React.createElement(getAgentProfile(thread.agentId).icon, { className: "h-4.5 w-4.5" })}
+                              </div>
+                              {thread.messages.some(m => m.status === "nova") && (
+                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 bg-indigo-500 border border-white rounded-full flex items-center justify-center"></span>
+                              )}
+                           </div>
+                           <div className="flex-1 min-w-0 pt-0.5">
+                              <div className="flex items-center justify-between mb-1">
+                                 <span className="text-xs font-bold text-slate-800 tracking-tight block truncate">{thread.agentRole}</span>
+                                 <span className="text-[9px] font-mono text-slate-400">{thread.lastMessage.createdAt}</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
+                                {thread.lastMessage.message}
+                              </p>
+                           </div>
+                        </button>
+                     ))
+                   )}
+                 </div>
+              </div>
+            ) : (
+              // --- CHAT VIEW ---
+              <>
+                 <div className="flex-1 overflow-y-auto p-4 space-y-5 font-sans relative bg-slate-50/50">
+                    {activeThread?.map((m) => (
+                      <motion.div
+                        key={m.id}
+                        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.22, ease: "easeOut" }}
+                        className={`flex w-full ${m.isUser ? 'justify-end' : 'justify-start'}`}
                       >
-                        {m.role === "user" ? (
-                          <p className="text-xs leading-relaxed font-sans">{m.content}</p>
-                        ) : (
-                          formatMarkdown(m.content)
-                        )}
-                      </div>
-                      <span className="text-[8px] font-mono text-muted mt-1 block px-1 text-right">
-                        {m.time}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="flex gap-2 max-w-[80%]">
-                    <div className="h-7 w-7 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                      <Bot className="h-4 w-4 text-primary animate-pulse" />
-                    </div>
-                    <div className="bg-card px-3 py-2.5 rounded-xl border border-border/80 shadow-xs flex items-center gap-2 animate-pulse">
-                      <span className="text-[10.5px] font-mono text-muted">Analisando Curva S...</span>
-                      <div className="flex gap-0.5 items-center">
-                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                        <span className="h-1.5 w-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
+                        <div className={`flex gap-2.5 max-w-[90%] md:max-w-[85%] ${m.isUser ? 'flex-row-reverse' : ''}`}>
+                          <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${m.isUser ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white text-indigo-600 border-slate-200'}`}>
+                            {m.isUser ? <User className="h-4.5 w-4.5" /> : React.createElement(getAgentProfile(m.agentId).icon, { className: "h-4.5 w-4.5" })}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            {!m.isUser && (
+                              <div className="flex items-center justify-between mb-1 px-1">
+                                <span className="text-[10px] font-bold text-slate-700">{m.agentName}</span>
+                                <span className="text-[9px] font-mono text-slate-400">{m.createdAt}</span>
+                              </div>
+                            )}
+                            
+                            <div className={`${m.isUser ? 'bg-indigo-600 text-white border border-indigo-700 rounded-xl rounded-tr-none' : 'bg-white border text-left border-slate-200 rounded-xl rounded-tl-none'} p-3.5 shadow-sm space-y-2.5`}>
+                               {!m.isUser && m.title && (
+                                 <div className="flex items-center gap-2 mb-1">
+                                   <span className={`text-[8px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${getSeverityColor(m.severity)}`}>
+                                     {m.severity === "critical" ? "CRÍTICO" : m.severity === "warning" ? "ALERTA" : "INFO"}
+                                   </span>
+                                   <h4 className="text-[11px] font-bold text-slate-800 truncate">{m.title}</h4>
+                                 </div>
+                               )}
+                               
+                               <p className={`text-[11px] leading-relaxed ${m.isUser ? "text-indigo-50" : "text-slate-600"}`}>
+                                 {m.message}
+                               </p>
 
-            {/* Quick Suggestions list */}
-            {messages.length === 1 && (
-              <div className="px-4 py-3 bg-secondary/35 border-t border-border">
-                <span className="text-[9px] font-mono font-bold text-muted uppercase tracking-wider block mb-2">
-                  Ações Rápidas sugeridas:
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {suggestionChips.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSend(chip.prompt)}
-                      className="text-left text-[10.5px] px-3 py-2 bg-card border border-border rounded-lg hover:border-primary/50 transition-all font-sans text-foreground/90 cursor-pointer flex items-center gap-2 shadow-xs group transform hover:scale-[1.02] hover:-translate-y-0.5"
-                    >
-                      <Sparkles className="h-3 w-3 text-warning shrink-0 group-hover:scale-110 group-hover:rotate-12 transition-transform" />
-                      <span className="truncate group-hover:text-primary font-semibold transition-colors">{chip.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                               {!m.isUser && m.evidence && m.evidence.length > 0 && (
+                                 <div className="bg-amber-50/50 border border-amber-200/50 rounded p-2.5 space-y-1">
+                                    <p className="text-[9px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1 mb-1.5">
+                                       <AlertTriangle className="h-3.5 w-3.5" /> Evidências:
+                                    </p>
+                                    <ul className="list-disc pl-4 text-[10px] text-amber-900/90 leading-relaxed">
+                                      {m.evidence.map((ev, i) => <li key={i}>{ev}</li>)}
+                                    </ul>
+                                 </div>
+                               )}
+
+                               {!m.isUser && m.status === "simulada" && (
+                                 <div className="bg-emerald-50 border border-emerald-200/60 p-2 rounded-lg flex items-center gap-2 mt-2">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                    <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest">Confirmação Humana Concluída</span>
+                                 </div>
+                               )}
+                               
+                               {!m.isUser && m.status !== "simulada" && m.suggestedActions && m.suggestedActions.length > 0 && (
+                                 <div className="pt-2 flex flex-wrap gap-2">
+                                    {m.suggestedActions.map((act, i) => (
+                                      <button
+                                        key={i}
+                                        onClick={() => handleAction(act.actionStr, m.id)}
+                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer border shadow-sm ${
+                                          act.type === "primary" ? "bg-indigo-600 text-white hover:bg-indigo-700 border-indigo-700" : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                        }`}
+                                      >
+                                        {act.label}
+                                      </button>
+                                    ))}
+                                 </div>
+                               )}
+                            </div>
+                            
+                            {m.isUser && (
+                              <div className="flex items-center justify-end mt-1 px-1">
+                                <span className="text-[9px] font-mono text-slate-400">{m.createdAt}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                    {isTyping && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="flex w-full justify-start"
+                      >
+                        <div className="flex gap-2.5 max-w-[90%] md:max-w-[85%]">
+                          <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 border shadow-xs bg-white text-indigo-600 border-slate-200">
+                             {activeThread && activeThread.length > 0 && React.createElement(getAgentProfile(activeThread[0].agentId).icon, { className: "h-4.5 w-4.5" })}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="bg-white border text-left border-slate-200 rounded-xl rounded-tl-none p-3.5 shadow-sm inline-flex items-center gap-1.5 h-[42px]">
+                               <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                               <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                               <span className="h-1.5 w-1.5 bg-indigo-400 rounded-full animate-bounce"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                    <div ref={chatEndRef} />
+                 </div>
+
+                 {/* Chat Input Box */}
+                 <div className="p-3 bg-white border-t border-slate-200">
+                    <form onSubmit={handleSendMessage} className="relative flex items-center gap-2">
+                       <input
+                         type="text"
+                         value={messageInput}
+                         onChange={(e) => setMessageInput(e.target.value)}
+                         placeholder="Escreva para o agente..."
+                         className="flex-1 bg-slate-50 border border-slate-200 text-slate-800 text-[11px] rounded-xl pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-sans"
+                       />
+                       <button
+                         type="submit"
+                         disabled={!messageInput.trim()}
+                         className="absolute right-2 h-7 w-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition-colors cursor-pointer"
+                       >
+                         <Send className="h-3 w-3" />
+                       </button>
+                    </form>
+                    <div className="bg-amber-50 border border-amber-200/60 p-2 mt-2 rounded-lg flex items-start gap-2">
+                       <ShieldCheck className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                       <span className="text-[8px] font-bold text-amber-700 uppercase tracking-widest leading-relaxed">Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.</span>
+                    </div>
+                 </div>
+              </>
             )}
-
-            {/* Input Box Panel */}
-            <div className="p-3 bg-white border-t border-slate-150">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSend(input);
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={`Pergunte ao EVIS sobre ${activeProj.name}...`}
-                  disabled={isLoading}
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans text-slate-800 placeholder-slate-400 focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50 transition-all"
-                />
-                <button
-                  type="submit"
-                  disabled={!input.trim() || isLoading}
-                  className="h-8 w-8 rounded-xl bg-slate-900 text-white hover:bg-indigo-650 flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-40 transition-all shadow-md shadow-slate-900/10 active:scale-95"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
-              <div className="mt-2 flex items-center justify-between text-[8px] font-mono text-slate-400 px-1">
-                <span className="flex items-center gap-0.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Criptografia de Dados ponta-a-ponta
-                </span>
-                <span className="flex items-center gap-1">
-                  Pressione <CornerDownLeft className="h-2 w-2" /> para enviar
-                </span>
-              </div>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -78,7 +78,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
   const [currentRoute, setCurrentRoute] = useState<MenuRoute>("dashboard");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("ob_1");
   const [activeSubTab, setActiveSubTab] = useState<string>("geral");
@@ -102,7 +102,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [theme, setThemeState] = useState<AppTheme>(() => {
     const saved = localStorage.getItem("evis_theme") as AppTheme;
-    return saved === "claro" || saved === "escuro" || saved === "premium" ? saved : "claro";
+    return saved === "claro" || saved === "escuro" || saved === "hibrido" ? saved : "claro";
   });
 
   useEffect(() => {

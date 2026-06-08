@@ -29,11 +29,20 @@ import {
   Plus,
   Upload,
   CheckCircle,
+  CheckCircle2,
   Settings,
   AlertTriangle,
+  AlertCircle,
   LayoutGrid,
-  List
+  List,
+  ShoppingCart,
+  Bell,
+  Star,
+  MessageSquare,
+  Bot,
+  ChevronRight
 } from "lucide-react";
+import ComprasView from "./ComprasView";
 
 type ActiveSubTab =
   | "geral"
@@ -45,13 +54,14 @@ type ActiveSubTab =
   | "medicoes"
   | "financeiro"
   | "equipe"
-  | "documentos";
+  | "documentos"
+  | "compras";
 
 export default function ObrasView() {
-  const { obras, getActiveProject, setSelectedProjectId, addRdo, addMedicao, lancamentos, activeSubTab, setActiveSubTab, showToast } = useApp();
-  const [isListView, setIsListView] = useState(true);
-  const [viewMode, setViewMode] = useState<"lista" | "quadro">("lista");
+  const { obras, getActiveProject, setSelectedProjectId, addRdo, addMedicao, lancamentos, activeSubTab, setActiveSubTab, showToast, currentRoute, setCurrentRoute, tasks } = useApp();
+  const [viewMode, setViewMode] = useState<"lista" | "quadro">("quadro");
   const [searchTerm, setSearchTerm] = useState("");
+  const [chipFilter, setChipFilter] = useState("Todas");
   const obra = getActiveProject();
   
   // States for RDO form
@@ -61,6 +71,7 @@ export default function ObrasView() {
   const [rdoObservations, setRdoObservations] = useState("");
   const [rdoTranscription, setRdoTranscription] = useState("");
   const [isGeneratingRdo, setIsGeneratingRdo] = useState(false);
+  const [rdoAIResult, setRdoAIResult] = useState<any>(null);
 
   // States for Medicao form
   const [medicaoAmount, setMedicaoAmount] = useState("");
@@ -102,7 +113,7 @@ export default function ObrasView() {
     addRdo(obra.id, rdoWeather, parseInt(rdoWorkers) || 40, rdoProgress, rdoObservations);
     setRdoProgress("");
     setRdoObservations("");
-    showToast("Relatório Diário de Obra (RDO) registrado e transmitido para aprovação técnica!", "success");
+    showToast("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.", "success");
   };
 
   const handleCreateMedicao = (e: React.FormEvent) => {
@@ -114,19 +125,47 @@ export default function ObrasView() {
     setMedicaoAmount("");
     setMedicaoDesc("");
     setIsRequestingMedicao(false);
-    showToast("Medição de Obra solicitada com sucesso! O perito do banco financiador receberá os logs para auditoria.", "success");
+    showToast("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.", "success");
   };
 
   const handleSelectObra = (id: string) => {
     setSelectedProjectId(id);
-    setIsListView(false);
+    setCurrentRoute("obra-detail");
   };
 
-  if (isListView) {
-    const filteredObras = obras.filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  if (currentRoute === "obras") {
+    const filteredObras = obras.filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase())).filter(o => {
+      if (chipFilter === "Todas") return true;
+      if (chipFilter === "Em Andamento") return o.progress < 100 && o.progress > 0;
+      
+      const tarefasAtrasadas = tasks.filter(t => t.project === o.id && new Date(t.dueDate) < new Date() && t.status !== "Concluido").length;
+      if (chipFilter === "Atrasadas") return tarefasAtrasadas > 0;
+      
+      const alertasInsumos = o.orcamentoInsumos.filter(i => i.actual > i.planned).length;
+      if (chipFilter === "Aguardando Insumos") return alertasInsumos > 0;
+      
+      return true;
+    });
     
     return (
       <div className="space-y-6 font-sans">
+        {/* Horizontal Chips Filter */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {["Todas", "Em Andamento", "Atrasadas", "Aguardando Insumos"].map(f => (
+            <button
+              key={f}
+              onClick={() => setChipFilter(f)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap cursor-pointer ${
+                chipFilter === f 
+                  ? "bg-zinc-800 text-white border-zinc-800" 
+                  : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
         <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg">
           {/* Header Controls for List */}
           <div className="p-4 border-b border-zinc-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -305,12 +344,27 @@ export default function ObrasView() {
                                 glowClass = "hover:shadow-[0_12px_24px_rgba(16,185,129,0.15)]";
                               }
 
+                              const tarefasAtrasadas = tasks.filter(t => t.project === o.id && new Date(t.dueDate) < new Date() && t.status !== "Concluido").length;
+                              const alertasInsumos = o.orcamentoInsumos.filter(i => i.actual > i.planned).length;
+                              const totalIssues = tarefasAtrasadas + alertasInsumos;
+
                               return (
                                 <div
                                   key={o.id}
                                   onClick={() => handleSelectObra(o.id)}
                                   className={`bg-white rounded-xl p-4.5 border border-zinc-200/80 shadow-2xs transition-all duration-300 relative overflow-hidden group/card cursor-pointer ${borderClass} ${glowClass}`}
                                 >
+                                  {totalIssues > 0 && o.progress < 100 && (
+                                    <div 
+                                      className={`absolute top-0 right-0 px-2 py-1 rounded-bl-lg font-mono font-bold text-[10px] shadow-sm flex items-center gap-1 z-10 ${
+                                        alertasInsumos > 0 ? "bg-red-500 text-white" : "bg-amber-400 text-amber-950"
+                                      }`}
+                                      title={`${tarefasAtrasadas} tarefas atrasadas | ${alertasInsumos} alertas de insumo`}
+                                    >
+                                      <span className="flex h-1.5 w-1.5 rounded-full bg-white opacity-80 animate-pulse"></span>
+                                      {totalIssues}
+                                    </div>
+                                  )}
                                   {o.progress >= 100 && (
                                     <div className="absolute top-2 right-2 flex items-center gap-1">
                                       <span className="relative flex h-1.5 w-1.5">
@@ -375,12 +429,20 @@ export default function ObrasView() {
 
   return (
     <div className="space-y-6 font-sans flex flex-col">
-      <button 
-        onClick={() => setIsListView(true)}
-        className="self-start px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 border border-zinc-200 hover:bg-white rounded-lg transition-colors cursor-pointer"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" /> Projetos
-      </button>
+      <div className="flex items-center justify-between print:hidden">
+        <button 
+          onClick={() => setCurrentRoute("obras")}
+          className="self-start px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 border border-zinc-200 hover:bg-white rounded-lg transition-colors cursor-pointer"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" /> Projetos
+        </button>
+        <button
+          onClick={() => window.print()}
+          className="px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-700 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-lg transition-colors shadow-sm cursor-pointer"
+        >
+          <FileText className="h-3.5 w-3.5 text-blue-600" /> Exportar Relatório (PDF)
+        </button>
+      </div>
 
       {/* Master Board Header */}
       <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -402,17 +464,28 @@ export default function ObrasView() {
           </div>
         </div>
 
-        <div className="text-right shrink-0 border-t md:border-t-0 pt-3.5 md:pt-0">
+        <div className="text-right shrink-0 border-t md:border-t-0 pt-3.5 md:pt-0 w-full md:w-64">
           <span className="text-[10px] font-mono text-zinc-400 block uppercase">Desembolso Financeiro</span>
           <span className="text-base font-mono font-bold text-[hsl(var(--color-primary))] mt-1 block">
              R$ {obra.budgetSpent.toLocaleString("pt-BR")}
           </span>
-          <span className="text-[10px] text-zinc-500 block">dos R$ {obra.budgetTotal.toLocaleString()} orçados</span>
+          <div className="w-full bg-zinc-100 h-1.5 rounded-full mt-2 overflow-hidden print:hidden">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                (obra.budgetSpent / obra.budgetTotal) > 0.9 ? 'bg-red-500' : 'bg-[hsl(var(--color-primary))]'
+              }`}
+              style={{ width: `${Math.min((obra.budgetSpent / obra.budgetTotal) * 100, 100)}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-zinc-500 block mt-1.5 flex justify-between">
+            <span>Realizado</span>
+            <span>R$ {obra.budgetTotal.toLocaleString("pt-BR")}</span>
+          </span>
         </div>
       </div>
 
       {/* Sub Tabs controller */}
-      <div className="flex flex-wrap gap-1 border-b border-zinc-200">
+      <div className="flex flex-wrap gap-1 border-b border-zinc-200 print:hidden">
         {[
           { id: "geral", label: "Geral", icon: Layers },
           { id: "orcamento", label: "Orçamento", icon: DollarSign },
@@ -422,6 +495,7 @@ export default function ObrasView() {
           { id: "rdo", label: "RDO (Diário)", icon: CloudSun },
           { id: "medicoes", label: "Medições", icon: FileCheck2 },
           { id: "financeiro", label: "Financeiro", icon: Coins },
+          { id: "compras", label: "Compras & Insumos", icon: ShoppingCart },
           { id: "equipe", label: "Equipe", icon: Users },
           { id: "documentos", label: "Documentos", icon: FolderDot },
         ].map((tab) => {
@@ -540,6 +614,51 @@ export default function ObrasView() {
                   Ver Todos Relatórios & Cadastrar <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
+
+              {/* Linha do Tempo / Histórico da Obra */}
+              <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 border-b border-zinc-100 pb-4 block">
+                  Linha do Tempo
+                </h3>
+                
+                <div className="relative border-l border-zinc-200 ml-[11px] mt-5 space-y-6">
+                  {/* Event: Milestone */}
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[14px] top-0 bg-emerald-100 border border-emerald-200 p-1 rounded-full text-emerald-600 shadow-[0_0_0_4px_#fff]">
+                      <Star className="h-4 w-4" fill="currentColor" />
+                    </div>
+                    <div className="flex flex-col pt-0.5">
+                      <span className="text-[10px] font-mono font-bold text-zinc-400">Hoje, 09:30</span>
+                      <h4 className="text-xs font-bold text-zinc-800 mt-1">Laje Nível 3 Concluída</h4>
+                      <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">Frente de trabalho de concretagem finalizou a cura inicial com sucesso. Marcos do cronograma atualizados.</p>
+                    </div>
+                  </div>
+
+                  {/* Event: Status Change */}
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[14px] top-0 bg-blue-100 border border-blue-200 p-1 rounded-full text-blue-600 shadow-[0_0_0_4px_#fff]">
+                      <Bell className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col pt-0.5">
+                      <span className="text-[10px] font-mono font-bold text-zinc-400">Ontem, 16:45</span>
+                      <h4 className="text-xs font-bold text-zinc-800 mt-1">Status Alterado</h4>
+                      <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">A obra avançou para o status <span className="font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">Em Execução de Estrutura</span>.</p>
+                    </div>
+                  </div>
+
+                  {/* Event: Note */}
+                  <div className="relative pl-6">
+                    <div className="absolute -left-[14px] top-0 bg-amber-100 border border-amber-200 p-1 rounded-full text-amber-600 shadow-[0_0_0_4px_#fff]">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col pt-0.5">
+                      <span className="text-[10px] font-mono font-bold text-zinc-400">14 de Março</span>
+                      <h4 className="text-xs font-bold text-zinc-800 mt-1">Nota da Engenharia</h4>
+                      <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed text-left">Avaliar cotação de blocos estruturais para entrega até o final do trimestre devido à alta demanda na cadeia de suprimentos.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -547,6 +666,27 @@ export default function ObrasView() {
         {/* TAB CRONOGRAMA */}
         {activeSubTab === "cronograma" && (
           <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
+             {/* Cronos Planejador */}
+             <div className="bg-teal-50 dark:bg-teal-900/10 p-4 rounded-lg border border-teal-200 dark:border-teal-900/40 mb-5 relative shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                   <Sparkles className="h-4 w-4 text-teal-600" />
+                   <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-teal-800 dark:text-teal-400">
+                      Cronos Planejador (Inteligência de Prazos)
+                   </h3>
+                </div>
+                <p className="text-sm font-medium text-teal-950 dark:text-teal-100 mb-3 leading-relaxed">
+                   Há desvio entre planejado e realizado. Esta etapa impacta o caminho crítico: <strong className="underline decoration-teal-300 cursor-pointer text-teal-900">A superestrutura do 7º ao 15º pavimento está com 12 dias de atraso projetado</strong>. Posso simular um novo cenário sem alterar o cronograma oficial.
+                </p>
+                <div className="flex gap-3">
+                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                     Simular Replanejamento
+                   </button>
+                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                     Ver Caminho Crítico
+                   </button>
+                </div>
+             </div>
+
             <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4 flex-col sm:flex-row gap-2">
               <div>
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900">
@@ -715,6 +855,27 @@ export default function ObrasView() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Form list diários */}
             <div className="lg:col-span-2 space-y-4">
+             {/* Diário de Obra IA */}
+             <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-200 dark:border-orange-900/40 mb-2 relative shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                   <Sparkles className="h-4 w-4 text-orange-600" />
+                   <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-orange-800 dark:text-orange-400">
+                      Diário de Obra IA (Copiloto de Campo)
+                   </h3>
+                </div>
+                <p className="text-sm font-medium text-orange-950 dark:text-orange-100 mb-3 leading-relaxed">
+                   Este RDO ainda é rascunho.<br/>
+                   <strong>Resumo:</strong> Efetivo alocado (45 funcionários), descarregamento de cimento CP-II no pátio logístico.<br/>
+                   Transformei as ocorrências em pendências sugeridas: <strong>Faltas registradas (2)</strong>.<br/>
+                   Publicar diário exige confirmação humana.
+                </p>
+                <div className="flex gap-3">
+                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-orange-600 text-white hover:bg-orange-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                     Publicação Simulada (Rascunho RDO)
+                   </button>
+                </div>
+             </div>
+
               <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 border-b border-zinc-100 pb-3 mb-4 block">
                   Criação de Relatório Diário de Obra (RDO)
@@ -742,20 +903,24 @@ export default function ObrasView() {
                       disabled={isGeneratingRdo || !rdoTranscription.trim()}
                       onClick={async () => {
                         setIsGeneratingRdo(true);
+                        setRdoAIResult(null);
                         try {
                           const res = await fetch("/api/ai/diario", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ transcription: rdoTranscription }),
+                            body: JSON.stringify({ idRefurbish: obra?.id || "N/A", transcricao: rdoTranscription }),
                           });
                           const data = await res.json();
                           if (res.ok) {
-                            if (data.data) {
-                              setRdoWeather(data.data.weather || "Ensolarado");
-                              setRdoWorkers(data.data.workers?.toString() || "45");
-                              setRdoProgress(data.data.progressNote || "");
-                              setRdoObservations(data.data.observations || "");
-                              showToast("Diário de Obra gerado & estruturado pela I.A.!", "success");
+                            if (data) {
+                              setRdoAIResult(data);
+                              
+                              // Atualiza de volta nos inputs visuais
+                              const eventosStr = "Eventos:\n\t" + (data.eventos?.join("\n\t") || "");
+                              setRdoProgress((data.resumoOperacional + "\n\n" + eventosStr).trim());
+                              setRdoObservations(data.impactos?.join("\n") || "");
+                              
+                              showToast("Diário analisado pelo Motor Semântico IA!", "success");
                             }
                           } else {
                             throw new Error(data.error || "Erro de geração");
@@ -781,6 +946,83 @@ export default function ObrasView() {
                       )}
                     </button>
                   </div>
+
+                  {/* Motor Semântico IA Output */}
+                  {rdoAIResult && (
+                    <div className="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4 mb-4 gap-3 flex flex-col shadow-xs animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-4 w-4 text-emerald-600" />
+                          <h4 className="text-xs font-bold text-emerald-900 uppercase tracking-tight">Motor Semântico de Obra IA</h4>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${
+                          rdoAIResult.confidenceScore === 'ALTO' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          rdoAIResult.confidenceScore === 'MEDIO' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                          'bg-red-100 text-red-700 border-red-200'
+                        }`}>
+                          Confiança: {rdoAIResult.confidenceScore}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                        <div className="bg-white rounded border border-emerald-100 p-2.5">
+                          <span className="text-[9px] font-bold font-mono text-emerald-500 block uppercase mb-1 drop-shadow-xs">Eventos Detectados</span>
+                          <ul className="text-xs text-emerald-950 font-medium space-y-1">
+                            {rdoAIResult.eventos?.map((e: string, i: number) => (
+                              <li key={i} className="flex items-center gap-1.5"><ChevronRight className="h-3 w-3 text-emerald-400" /> {e}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="bg-white rounded border border-emerald-100 p-2.5">
+                          <span className="text-[9px] font-bold font-mono text-emerald-500 block uppercase mb-1 drop-shadow-xs">Domínios Afetados</span>
+                          <div className="flex flex-wrap gap-1">
+                            {rdoAIResult.dominios?.map((d: string, i: number) => (
+                              <span key={i} className="bg-zinc-100 border border-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold font-mono tracking-tighter">
+                                {d}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded border border-emerald-100 p-2.5">
+                        <span className="text-[9px] font-bold font-mono text-emerald-500 block uppercase mb-1 drop-shadow-xs">Entidades Estruturadas</span>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {Object.entries(rdoAIResult.entidades || {}).map(([key, value]) => (
+                            <div key={key} className="bg-emerald-50/50 p-1.5 rounded">
+                              <span className="text-[9px] text-emerald-700/70 font-mono uppercase truncate block mb-0.5">{key}</span>
+                              <span className="text-[11px] font-bold flex text-emerald-900 leading-tight">{typeof value === 'string' ? value : String(value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {rdoAIResult.impactos?.length > 0 && (
+                         <div className="bg-red-50/50 rounded border border-red-100 p-2.5">
+                           <span className="text-[9px] font-bold font-mono text-red-500 block uppercase mb-1 drop-shadow-xs">Impactos Projetados</span>
+                           <ul className="text-xs text-red-950 space-y-1">
+                             {rdoAIResult.impactos.map((imp: string, i: number) => <li key={i} className="flex items-start gap-1"><AlertCircle className="h-3.5 w-3.5 text-red-400 mt-0.5 shrink-0"/> <span className="leading-tight">{imp}</span></li>)}
+                           </ul>
+                         </div>
+                      )}
+
+                      {rdoAIResult.acoesSugeridas?.length > 0 && (
+                        <div className="bg-blue-50/50 rounded border border-blue-100 p-2.5">
+                          <span className="text-[9px] font-bold font-mono text-blue-500 block uppercase mb-1 drop-shadow-xs">Ações Sugeridas (HITL)</span>
+                          <ul className="text-xs text-blue-950 space-y-1">
+                             {rdoAIResult.acoesSugeridas.map((acao: string, i: number) => <li key={i} className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-blue-500"/> {acao}</li>)}
+                           </ul>
+                        </div>
+                      )}
+                      
+                      {rdoAIResult.necessitaValidacaoHumana && (
+                        <div className="mt-2 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] p-2 rounded flex items-center font-bold">
+                          <AlertTriangle className="h-3 w-3 mr-1.5 shrink-0" />
+                          A inteligência artificial do EVIS sugere atualização do estado da obra. Revise o preenchimento automático abaixo e valide a operação confirmando o comando.
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1144,7 +1386,7 @@ export default function ObrasView() {
                       type="button"
                       onClick={() => {
                         setProjectTeam(prev => prev.filter(t => t.name !== eq.name));
-                        alert(`Membro ${eq.name} removido da equipe do projeto.`);
+                        alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
                       }}
                       className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition-colors"
                       title="Remover do Projeto"
@@ -1169,7 +1411,7 @@ export default function ObrasView() {
                   const newMember = { name: newTeamName, role: newTeamRole };
                   setProjectTeam(prev => [...prev, newMember]);
                   setNewTeamName("");
-                  alert(`${newTeamName} foi alocado com sucesso como ${newTeamRole} no projeto ${obra.name}!`);
+                  alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
                 }}
                 className="space-y-4 text-xs text-left"
               >
@@ -1270,7 +1512,7 @@ export default function ObrasView() {
                         date: new Date().toISOString().split("T")[0]
                       };
                       setProjectDocs(prev => [newD, ...prev]);
-                      alert("Documento anexado de forma segura sob criptografia no servidor construtora.");
+                      alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
                     }
                   }}
                   className="p-6 border-2 border-dashed border-zinc-200 rounded-lg text-center hover:border-[hsl(var(--color-primary))] cursor-pointer transition-colors bg-zinc-50/50"
@@ -1285,6 +1527,11 @@ export default function ObrasView() {
                 <strong>Análise Técnica Segura:</strong> Todos os desenhos técnicos carregados no EVIS ERP passam pelo pré-processamento de compatibilização estrutural automatizado em conformidade com as normas regulamentares NBR brasileiras.
               </div>
             </div>
+          </div>
+        )}
+        {activeSubTab === "compras" && (
+          <div className="animate-in fade-in">
+            <ComprasView />
           </div>
         )}
       </div>

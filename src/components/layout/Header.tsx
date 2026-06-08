@@ -21,7 +21,9 @@ import {
   Sun,
   Moon,
   Sparkles,
-  MessageCircle
+  MessageCircle,
+  Maximize,
+  Minimize
 } from "lucide-react";
 
 export default function Header() {
@@ -93,13 +95,23 @@ export default function Header() {
   ];
 
   return (
-    // Hardcode L79: fixed bg-white/80 to bk-background/80
     <header
       id="evis_header"
-      className="h-14 font-sans border-b border-[hsl(var(--color-border))] bg-[hsl(var(--color-background))]/80 backdrop-blur-md sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between"
+      className="h-14 font-sans bg-white border-b border-border sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between print:hidden"
     >
+      {/* Overlay to close dropdowns when clicking outside */}
+      {(profileOpen || notificationOpen) && (
+        <div 
+          className="fixed inset-0 z-40 transition-opacity" 
+          onClick={() => {
+            setProfileOpen(false);
+            setNotificationOpen(false);
+          }}
+        />
+      )}
+
       {/* Left section */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative z-50">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-1.5 rounded-lg border border-[hsl(var(--color-border))] hover:bg-[hsl(var(--color-secondary))] cursor-pointer text-zinc-700 hover:text-zinc-950 transition-colors"
@@ -126,7 +138,7 @@ export default function Header() {
       </div>
 
       {/* Right / Quick Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative z-50">
         {/* Active Project Switcher Dropdown */}
         <div className="flex items-center gap-1.5 px-3 py-1 bg-[hsl(var(--color-secondary))] border border-[hsl(var(--color-border))] rounded-lg">
           <Building2 className="h-3.5 w-3.5 text-zinc-500" />
@@ -143,6 +155,20 @@ export default function Header() {
             ))}
           </select>
         </div>
+
+        {/* Focus Mode Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+            !sidebarOpen 
+              ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+              : 'bg-[hsl(var(--color-secondary))] text-zinc-500 border-[hsl(var(--color-border))] hover:bg-zinc-100 hover:text-zinc-700'
+          }`}
+          title="Modo Foco"
+        >
+          {sidebarOpen ? <Maximize className="h-3.5 w-3.5" /> : <Minimize className="h-3.5 w-3.5" />}
+          <span className="text-[10px] font-bold uppercase tracking-wider">{!sidebarOpen ? 'Sair Foco' : 'Modo Foco'}</span>
+        </button>
 
         {/* Theme Segment Control (Desktop Header) */}
         <div className="hidden md:flex items-center gap-1 p-0.5 bg-[hsl(var(--color-secondary))]/60 border border-[hsl(var(--color-border))] rounded-lg">
@@ -173,16 +199,16 @@ export default function Header() {
           </button>
 
           <button
-            onClick={() => setTheme("premium")}
-            title="Super Premium Apple"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold font-sans cursor-pointer transition-all ${
-              theme === "premium"
-                ? "bg-gradient-to-r from-slate-900 to-indigo-950 text-amber-400 shadow-sm border border-white/5"
-                : "text-zinc-555 hover:text-zinc-900"
+            onClick={() => setTheme("hibrido")}
+            title="Tema Híbrido"
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${
+              theme === "hibrido"
+                ? "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-500 shadow-sm font-semibold border border-blue-500/20 backdrop-blur-md"
+                : "text-zinc-550 hover:text-zinc-900"
             }`}
           >
-            <Sparkles className="h-3 w-3 text-amber-400" />
-            <span>Apple Pro</span>
+            <Sparkles className="h-3 w-3" />
+            <span>Híbrido</span>
           </button>
         </div>
 
@@ -204,7 +230,7 @@ export default function Header() {
         </button>
 
         {/* Bell badge Notification widget */}
-        <div className="relative">
+        <div className="relative notification-dropdown">
           <button
             onClick={() => {
               setNotificationOpen(!notificationOpen);
@@ -242,7 +268,7 @@ export default function Header() {
         </div>
 
         {/* User Dropdown or Login */}
-        <div className="relative">
+        <div className="relative user-dropdown">
             <button
               onClick={() => {
                 setProfileOpen(!profileOpen);
@@ -368,15 +394,15 @@ export default function Header() {
                     <span className="text-[9px] font-semibold">Escuro</span>
                   </button>
                   <button
-                    onClick={() => setTheme("premium")}
+                    onClick={() => setTheme("hibrido")}
                     className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${
-                      theme === "premium"
-                        ? "bg-gradient-to-b from-slate-900 to-slate-950 border-amber-500 text-amber-400 shadow-sm"
+                      theme === "hibrido"
+                        ? "bg-gradient-to-b from-blue-50/50 to-indigo-50/50 border-blue-400 text-blue-600 shadow-sm"
                         : "bg-white/60 border-slate-200/60 text-slate-500 hover:bg-white hover:text-slate-800"
                     }`}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold">Apple Pro</span>
+                    <span className="text-[9px] font-bold">Híbrido</span>
                   </button>
                 </div>
               </div>

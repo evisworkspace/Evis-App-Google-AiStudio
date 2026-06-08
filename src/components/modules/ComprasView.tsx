@@ -23,12 +23,14 @@ import {
   History
 } from "lucide-react";
 
-type ComprasTab = "panorama" | "solicitacoes" | "cotacoes" | "ordens" | "historico";
+type ComprasTab = "panorama" | "solicitacoes" | "cotacoes" | "ordens" | "historico" | "estoque";
 
 export default function ComprasView() {
-  const { currentRoute, obras, purchases, setPurchases } = useApp();
+  const { currentRoute, obras, purchases, setPurchases, getActiveProject } = useApp();
   const [comprasTab, setComprasTab] = useState<ComprasTab>("panorama");
   const [itemSearch, setItemSearch] = useState("");
+  const activeObra = getActiveProject();
+  const projectPurchases = purchases.filter(p => p.project === activeObra.id);
 
   // Solicitações de Compra localized list
   const [solicitacoes, setSolicitacoes] = useState([
@@ -41,7 +43,6 @@ export default function ComprasView() {
   const [newScItem, setNewScItem] = useState("");
   const [newScQty, setNewScQty] = useState("");
   const [newScUnit, setNewScUnit] = useState("un");
-  const [newScProject, setNewScProject] = useState(obras[0]?.id || "ob_1");
 
   // Comparison Matrix quotes data
   const [comparisonMatrix, setComparisonMatrix] = useState({
@@ -62,11 +63,13 @@ export default function ComprasView() {
     { id: "est_5", name: "Arame Recozido Nº 18", qty: 120, unit: "kg", project: "Residencial Belle Vue", minStock: 30 },
   ]);
 
+  const projectEstoqueItems = estoqueItems.filter(e => e.project === activeObra.name);
+
   const handleCreateSc = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newScItem.trim() || !newScQty) return;
 
-    const linkedProj = obras.find(o => o.id === newScProject)?.name || "Batel Tower";
+    const linkedProj = activeObra.name;
     const newSc = {
       id: `sc_${Date.now()}`,
       item: newScItem,
@@ -80,7 +83,7 @@ export default function ComprasView() {
     setSolicitacoes([newSc, ...solicitacoes]);
     setNewScItem("");
     setNewScQty("");
-    alert(`Solicitação de Compra (SC-${newSc.id.toUpperCase()}) aberta de forma integrada!`);
+    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
   };
 
   const handleApproveQuote = (optName: string, price: number) => {
@@ -100,7 +103,7 @@ export default function ComprasView() {
     };
 
     setPurchases((prev) => [newPo, ...prev]);
-    alert(`Parabéns! Fornecedor ${optName} homologado com sucesso. Ordem de Compra ${newPo.id} transmitida ao parceiro.`);
+    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
   };
 
   const executeRestock = (id: string, name: string) => {
@@ -111,71 +114,10 @@ export default function ComprasView() {
       }
       return item;
     }));
-    alert(`Ordem de reposição emergencial disparada na matriz. Estoque do canteiro para o item "${name}" reabastecido.`);
+    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
   };
 
-  // If currentRoute is "estoque", override the view to show and manage physical deposits
-  if (currentRoute === "estoque") {
-    return (
-      <div className="space-y-6 font-sans text-xs">
-        <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-150 pb-3 mb-4.5 gap-3">
-            <div>
-              <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-zinc-950 flex items-center gap-1.5 leading-none">
-                <Box className="h-4.5 w-4.5 text-zinc-650" /> Almoxarifado Central & Estoque Físico
-              </h2>
-              <p className="text-[10px] text-zinc-500 font-sans mt-1">
-                Acompanhamento em tempo real de materiais descarregados nos canteiros estruturais de Curitiba.
-              </p>
-            </div>
-            <span className="text-[9.5px] font-mono text-zinc-400">Total de Categorias Monitoradas: {estoqueItems.length}</span>
-          </div>
 
-          <div className="overflow-x-auto text-[11px]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-200 text-[10px] text-zinc-400 font-mono uppercase">
-                  <th className="pb-2.5">Descrição Insumo</th>
-                  <th className="pb-2.5">Qtd Estocada</th>
-                  <th className="pb-2.5">Unidade</th>
-                  <th className="pb-2.5">Canteiro / Alocação</th>
-                  <th className="pb-2.5 text-center">Acordo Emergencial</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-50">
-                {estoqueItems.map((item) => {
-                  const isRunningLow = item.qty <= item.minStock;
-                  return (
-                    <tr key={item.id} className="hover:bg-zinc-50/50">
-                      <td className="py-3">
-                        <span className="font-semibold text-zinc-800 block leading-tight">{item.name}</span>
-                        {isRunningLow && (
-                          <span className="inline-block mt-1 text-[8.5px] font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded leading-none uppercase">
-                            ⚠️ ABAIXO DO LIMITE MÍNIMO
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 font-mono font-bold text-zinc-805">{item.qty.toLocaleString()}</td>
-                      <td className="py-3 font-mono text-zinc-500">{item.unit}</td>
-                      <td className="py-3 font-sans text-zinc-600 font-medium">{item.project}</td>
-                      <td className="py-3 text-center">
-                        <button
-                          onClick={() => executeRestock(item.id, item.name)}
-                          className="px-2.5 py-1.5 text-[9.5px] font-semibold bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-650 rounded cursor-pointer transition-colors font-mono uppercase"
-                        >
-                          Disparar Reposição
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 font-sans text-xs select-none">
@@ -196,6 +138,7 @@ export default function ComprasView() {
             { id: "solicitacoes", label: "Solicitações (SC)", icon: PlusSquare },
             { id: "cotacoes", label: "Cotações / Matriz", icon: ArrowRightLeft },
             { id: "ordens", label: "Ordens (OC)", icon: FileSpreadsheet },
+            { id: "estoque", label: "Estoque Físico", icon: Box },
             { id: "historico", label: "Histórico SINAPI", icon: History },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -218,6 +161,84 @@ export default function ComprasView() {
         </div>
       </div>
 
+      {comprasTab === "estoque" && (
+        <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
+           {/* Radar de Insumos */}
+           <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-lg border border-amber-200 dark:border-amber-900/40 mb-5 relative shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                 <Sparkles className="h-4 w-4 text-amber-600" />
+                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                    Radar de Insumos (Auditor de Materiais)
+                 </h3>
+              </div>
+              <p className="text-sm font-medium text-amber-950 dark:text-amber-100 mb-3 leading-relaxed">
+                 O consumo de <span className="font-bold underline text-amber-800">Aço Estrutural CA-50 12mm</span> está acima do previsto. Há risco de ruptura antes da próxima etapa.<br/>
+                 Além disso, notei uma variação de preço (+3%) na última previsão do SINAPI; esta variação pode afetar a margem.
+              </p>
+              <div className="flex gap-3">
+                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   Analisar Variação de Preço
+                 </button>
+                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   Investigar consumo atípico
+                 </button>
+              </div>
+           </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-150 pb-3 mb-4.5 gap-3">
+            <div>
+              <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-zinc-950 flex items-center gap-1.5 leading-none">
+                <Box className="h-4.5 w-4.5 text-zinc-650" /> Almoxarifado Central & Estoque Físico
+              </h2>
+              <p className="text-[10px] text-zinc-500 font-sans mt-1">
+                Acompanhamento em tempo real de materiais descarregados nos canteiros da obra {activeObra.name}.
+              </p>
+            </div>
+            <span className="text-[9.5px] font-mono text-zinc-400">Total de Categorias Monitoradas: {projectEstoqueItems.length}</span>
+          </div>
+
+          <div className="overflow-x-auto text-[11px]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-200 text-[10px] text-zinc-400 font-mono uppercase">
+                  <th className="pb-2.5">Descrição Insumo</th>
+                  <th className="pb-2.5">Qtd Estocada</th>
+                  <th className="pb-2.5">Unidade</th>
+                  <th className="pb-2.5 text-center">Acordo Emergencial</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {projectEstoqueItems.map((item) => {
+                  const isRunningLow = item.qty <= item.minStock;
+                  return (
+                    <tr key={item.id} className="hover:bg-zinc-50/50">
+                      <td className="py-3">
+                        <span className="font-semibold text-zinc-800 block leading-tight">{item.name}</span>
+                        {isRunningLow && (
+                          <span className="inline-block mt-1 text-[8.5px] font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 px-1 py-0.5 rounded leading-none uppercase">
+                            ⚠️ ABAIXO DO LIMITE MÍNIMO
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 font-mono font-bold text-zinc-805">{item.qty.toLocaleString()}</td>
+                      <td className="py-3 font-mono text-zinc-500">{item.unit}</td>
+                      <td className="py-3 text-center">
+                        <button
+                          onClick={() => executeRestock(item.id, item.name)}
+                          className="px-2.5 py-1.5 text-[9.5px] font-semibold bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-650 rounded cursor-pointer transition-colors font-mono uppercase"
+                        >
+                          Disparar Reposição
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* PANORAMA SUB TAB */}
       {comprasTab === "panorama" && (
         <div className="space-y-6">
@@ -231,14 +252,14 @@ export default function ComprasView() {
             <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-4">
               <span className="text-[10px] font-mono font-bold text-zinc-400 block uppercase">Volume Homologado</span>
               <span className="text-xl font-bold font-mono text-zinc-800 mt-1 block">
-                R$ {purchases.reduce((acc, curr) => acc + curr.total, 0).toLocaleString("pt-BR")}
+                R$ {projectPurchases.reduce((acc, curr) => acc + curr.total, 0).toLocaleString("pt-BR")}
               </span>
               <p className="text-[9.5px] text-zinc-500 font-sans mt-1">Soma líquida de ordens autorizadas.</p>
             </div>
 
             <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-4">
               <span className="text-[10px] font-mono font-bold text-zinc-400 block uppercase">Ordens de Compra (OCs)</span>
-              <span className="text-xl font-bold font-mono text-zinc-800 mt-1 block">{purchases.length}</span>
+              <span className="text-xl font-bold font-mono text-zinc-800 mt-1 block">{projectPurchases.length}</span>
               <p className="text-[9.5px] text-zinc-500 font-sans mt-1">Carga logística despachada.</p>
             </div>
 
@@ -312,7 +333,7 @@ export default function ComprasView() {
                 </thead>
                 <tbody className="divide-y divide-zinc-50">
                   {solicitacoes
-                    .filter(s => s.item.toLowerCase().includes(itemSearch.toLowerCase()))
+                    .filter(s => s.project === activeObra.name && s.item.toLowerCase().includes(itemSearch.toLowerCase()))
                     .map((sc) => (
                       <tr key={sc.id} className="hover:bg-zinc-50/50">
                         <td className="py-2.5">
@@ -383,16 +404,10 @@ export default function ComprasView() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase block mb-1">Destinar para Canteiro</label>
-                <select
-                  value={newScProject}
-                  onChange={(e) => setNewScProject(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded text-zinc-750 font-sans"
-                >
-                  {obras.map(o => (
-                    <option key={o.id} value={o.id}>{o.name}</option>
-                  ))}
-                </select>
+                <label className="text-[10px] font-mono font-bold text-zinc-400 uppercase block mb-1">Canteiro Local</label>
+                <div className="w-full px-3 py-2 bg-zinc-100 border border-zinc-200 rounded text-zinc-500 font-sans cursor-not-allowed">
+                  {activeObra.name}
+                </div>
               </div>
 
               <button
@@ -409,6 +424,28 @@ export default function ComprasView() {
       {/* COTAÇÕES / MATRIZ */}
       {comprasTab === "cotacoes" && (
         <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
+           {/* Nina Compras Insights */}
+           <div className="bg-fuchsia-50 dark:bg-fuchsia-900/10 p-4 rounded-lg border border-fuchsia-200 dark:border-fuchsia-900/40 mb-5 relative shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                 <Sparkles className="h-4 w-4 text-fuchsia-600" />
+                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-fuchsia-800 dark:text-fuchsia-400">
+                    Nina Compras (Analista de Suprimentos)
+                 </h3>
+              </div>
+              <p className="text-sm font-medium text-fuchsia-950 dark:text-fuchsia-100 mb-3 leading-relaxed">
+                 O menor preço não é necessariamente a melhor compra se atrasar a obra. A <strong>Votorantim Cimentos</strong> oferece a melhor recomendação em custo-benefício (9.8).<br/>
+                 Há também uma <span className="font-bold underline cursor-pointer text-fuchsia-800">Compra Crítica iminente</span> (Aço Estrutural CA-50 em Batel). Esta solicitação impacta o caminho crítico. Emitir compra exige aprovação.
+              </p>
+              <div className="flex gap-3">
+                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-fuchsia-600 text-white hover:bg-fuchsia-700 transition-colors rounded shadow-sm cursor-pointer">
+                   Comparativo de Fornecedores
+                 </button>
+                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50 transition-colors rounded shadow-sm cursor-pointer">
+                   Tratar Compra Crítica (Aço CA-50)
+                 </button>
+              </div>
+           </div>
+
           <div className="border-b border-zinc-150 pb-3 mb-4.5">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 leading-none">
               Quadro Comparativo de Propostas: {comparisonMatrix.item}
@@ -474,7 +511,7 @@ export default function ComprasView() {
                 Relação de insumos com contratos vigentes e prazos de transporte rastreados.
               </p>
             </div>
-            <span className="text-[9.5px] font-mono text-zinc-400">Total OCs Emitidas: {purchases.length}</span>
+            <span className="text-[9.5px] font-mono text-zinc-400">Total OCs Emitidas: {projectPurchases.length}</span>
           </div>
 
           <div className="overflow-x-auto text-[11px]">
@@ -489,7 +526,7 @@ export default function ComprasView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {purchases.map((po) => (
+                {projectPurchases.map((po) => (
                   <tr key={po.id} className="hover:bg-zinc-50/50">
                     <td className="py-2.5 font-mono text-[10.5px] text-zinc-500">
                       <strong>{po.id}</strong>
@@ -507,7 +544,7 @@ export default function ComprasView() {
                       <button
                         onClick={() => {
                           setPurchases(prev => prev.filter(p => p.id !== po.id));
-                          alert(`Ordem de Compra ${po.id} suspensa/bloqueada no ERP.`);
+                          alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
                         }}
                         className="px-2 py-1 text-[9.5px] text-zinc-500 bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 border border-zinc-200 hover:border-rose-100 rounded cursor-pointer transition-colors font-mono"
                       >

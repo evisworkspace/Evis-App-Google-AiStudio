@@ -6,9 +6,10 @@ import DashboardView from "./components/modules/DashboardView";
 import ObrasView from "./components/modules/ObrasView";
 import OportunidadesView from "./components/modules/OportunidadesView";
 import FinanceiroView from "./components/modules/FinanceiroView";
-import ComprasView from "./components/modules/ComprasView";
+
 import TarefasView from "./components/modules/TarefasView";
 import WorkspaceView from "./components/modules/WorkspaceView";
+import MapaAgentesView from "./components/modules/MapaAgentesView";
 import AdminView from "./components/modules/AdminView";
 import EvisChat from "./components/assistente/EvisChat";
 import ToastContainer from "./components/layout/ToastContainer";
@@ -50,7 +51,7 @@ function AppContent() {
     if (currentRoute === "dashboard") {
       return <DashboardView />;
     }
-    if (currentRoute === "obras") {
+    if (currentRoute === "obras" || currentRoute === "obra-detail") {
       return <ObrasView />;
     }
     if (currentRoute === "oportunidades") {
@@ -62,9 +63,10 @@ function AppContent() {
     if (currentRoute === "workspace") {
       return <WorkspaceView />;
     }
-    if (currentRoute === "compras" || currentRoute === "estoque") {
-      return <ComprasView />;
+    if (currentRoute === "mapa-agentes") {
+      return <MapaAgentesView />;
     }
+
     if (currentRoute.startsWith("financeiro-")) {
       return <FinanceiroView />;
     }
@@ -80,7 +82,7 @@ function AppContent() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-app-surface flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <span className="animate-spin h-8 w-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full"></span>
       </div>
     );
@@ -91,7 +93,7 @@ function AppContent() {
   }
 
   return (
-    <div id="evis_root_shell" className="h-screen bg-app-surface flex text-foreground overflow-hidden antialiased font-sans transition-colors duration-200">
+    <div id="evis_root_shell" className="h-screen flex text-foreground overflow-hidden antialiased font-sans transition-colors duration-200 relative">
       {/* Coluna Esquerda: Sidebar */}
       <Sidebar />
 

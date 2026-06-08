@@ -19,10 +19,19 @@ import {
   ArrowUp,
   X,
   Calendar,
-  Flag
+  Flag,
+  ShieldAlert,
+  Bot
 } from "lucide-react";
 
-import PremiumCurvaChart from "./PremiumCurvaChart";
+import { getAgentProfileByRole } from "../../utils/agentesConfig";
+
+const AgentIcon = ({ role, className }: { role: string, className?: string }) => {
+  const profile = getAgentProfileByRole(role);
+  return React.createElement(profile.icon, { className: className || "h-4 w-4" });
+};
+
+
 
 // Micro-component to smoothly count up to values
 function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
@@ -179,34 +188,110 @@ export default function DashboardView() {
   // Recent transactions
   const recentTransactions = lancamentos.slice(0, 4);
 
+  const openMaestro = (agentRole: string) => {
+    window.dispatchEvent(new CustomEvent("open-maestro", { detail: { agentRole } }));
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Alert Header - Curitiba Civil Specific weather indicator */}
-      <div className="p-4 bg-blue-50 border border-blue-150 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-500 text-white rounded-lg shrink-0 mt-0.5">
+          <div className="p-2 bg-primary text-white rounded-lg shrink-0 mt-0.5 shadow-[0_2px_8px_rgba(43,91,156,0.2)]">
             <CloudSun className="h-4.5 w-4.5 animate-pulse" />
           </div>
           <div>
-            <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-blue-900">
+            <h4 className="text-xs font-bold font-heading uppercase tracking-wider text-primary">
               Operação Climática & Condições de Concretagem — Curitiba/PR
             </h4>
-            <p className="text-[11px] text-blue-700 leading-relaxed mt-0.5 max-w-2xl font-sans">
-              Tempo parcialmente nublado com umidade relativa do ar em <span className="font-bold text-zinc-900">78%</span>. Recomendações de aditivos retardadores recomendáveis para a concretagem das lajes do <span className="font-bold text-zinc-900">Residencial Belle Vue</span>. Risco de garoa isolada à noite de <span className="font-bold text-zinc-900">25%</span>.
+            <p className="text-[11px] text-muted leading-relaxed mt-0.5 max-w-2xl font-sans">
+              Tempo parcialmente nublado com umidade relativa do ar em <span className="font-bold text-foreground">78%</span>. Recomendações de aditivos retardadores recomendáveis para a concretagem das lajes do <span className="font-bold text-foreground">Residencial Belle Vue</span>. Risco de garoa isolada à noite de <span className="font-bold text-foreground">25%</span>.
             </p>
           </div>
         </div>
-        <div className="px-3 py-1.5 bg-white border border-blue-200 rounded-md shrink-0 flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
-          <span className="text-[10px] font-mono font-bold text-blue-800">Canteiros Estáveis</span>
+        <div className="px-3 py-1.5 bg-[hsl(var(--color-card))]/50 backdrop-blur border border-blue-200/50 rounded-md shrink-0 flex items-center gap-1.5 shadow-sm">
+          <span className="h-2 w-2 rounded-full bg-success animate-ping"></span>
+          <span className="text-[10px] font-mono font-bold text-primary">Canteiros Estáveis</span>
+        </div>
+      </div>
+
+      {/* Mensagem Recebida: Sentinela de Riscos */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div className="absolute top-0 left-0 bottom-0 w-1 bg-red-500"></div>
+        <div className="h-10 w-10 shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl flex items-center justify-center border border-red-200 dark:border-red-900/50 shadow-sm">
+          <AgentIcon role="Sentinela de Riscos" className="h-5 w-5" />
+        </div>
+        <div className="flex-1 w-full min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">Sentinela</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Sentinela de Riscos</span>
+              <span className="text-[8px] bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 font-bold px-1.5 py-0.5 rounded uppercase uppercase ml-1">
+                Crítico
+              </span>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-mono">14:22</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase border border-zinc-200 dark:border-zinc-700">
+              Escopo: Portfólio Global
+            </span>
+          </div>
+          <p className="text-[12px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium mb-3">
+            Detectei risco crítico no <strong>Batel Tower</strong>. Emissão frequente de SC para Aço CA-50 está superando os volumes do SINAPI. Impacto alto estimado em prazo e margem.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => openMaestro("Sentinela")}
+              className="text-[10px] uppercase font-bold bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-3 py-1.5 rounded-lg transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+            >
+              Abrir Conversa <ArrowUpRight className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mensagem Recebida: EVA Executiva */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div className="absolute top-0 left-0 bottom-0 w-1 bg-indigo-500"></div>
+        <div className="h-10 w-10 shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-200 dark:border-indigo-900/50 shadow-sm">
+          <AgentIcon role="EVA Executiva" className="h-5 w-5" />
+        </div>
+        <div className="flex-1 w-full min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100">EVA</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400">EVA Executiva</span>
+              <span className="text-[8px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 font-bold px-1.5 py-0.5 rounded uppercase uppercase ml-1">
+                Atenção
+              </span>
+            </div>
+            <span className="text-[10px] text-zinc-400 font-mono">08:00</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-1.5 py-0.5 rounded font-mono font-bold uppercase border border-zinc-200 dark:border-zinc-700">
+              Escopo: Portfólio Global
+            </span>
+          </div>
+          <p className="text-[12px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium mb-3">
+            Aqui está o resumo do dia. Existem 3 decisões operacionais pendentes e 1 conflito de agenda afetando as frentes de serviço. Notei risco financeiro concentrado no <strong>Residencial Kairo</strong>.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => openMaestro("EVA")}
+              className="text-[10px] uppercase font-bold bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 px-3 py-1.5 rounded-lg transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+            >
+              Abrir Conversa <ArrowUpRight className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* KPI Widgets Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI: Orçamento Global */}
-        <div className="bg-gradient-to-br from-card to-secondary/40 border border-border rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/5 group">
-          <div className="flex items-start justify-between">
+        <div className="bg-white border border-border rounded-lg relative overflow-hidden group p-5 shadow-sm">
+          <div className="flex items-start justify-between relative z-10">
             <div>
               <span className="text-[10px] font-mono tracking-wider text-muted uppercase font-bold block">
                 Orçamento Geral Portfólio
@@ -231,8 +316,8 @@ export default function DashboardView() {
         </div>
 
         {/* KPI: Gasto Executado */}
-        <div className="bg-gradient-to-br from-card to-secondary/40 border border-border rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-destructive/5 group">
-          <div className="flex items-start justify-between">
+        <div className="bg-white border border-border rounded-lg relative overflow-hidden group p-5 shadow-sm">
+          <div className="flex items-start justify-between relative z-10">
             <div>
               <span className="text-[10px] font-mono tracking-wider text-muted uppercase font-bold block">
                 Desembolso Acumulado Real
@@ -257,8 +342,8 @@ export default function DashboardView() {
         </div>
 
         {/* KPI: Progresso Físico Médio */}
-        <div className="bg-gradient-to-br from-card to-secondary/40 border border-border rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-accent/5 group">
-          <div className="flex items-start justify-between">
+        <div className="bg-white border border-border rounded-lg relative overflow-hidden group p-5 shadow-sm">
+          <div className="flex items-start justify-between relative z-10">
             <div>
               <span className="text-[10px] font-mono tracking-wider text-muted uppercase font-bold block">
                 Média Progresso Físico
@@ -284,8 +369,8 @@ export default function DashboardView() {
         </div>
 
         {/* KPI: Oportunidades do Funil */}
-        <div className="bg-gradient-to-br from-card to-secondary/40 border border-border rounded-xl p-5 relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-emerald-500/5 group">
-          <div className="flex items-start justify-between">
+        <div className="bg-white border border-border rounded-lg relative overflow-hidden group p-5 shadow-sm">
+          <div className="flex items-start justify-between relative z-10">
             <div>
               <span className="text-[10px] font-mono tracking-wider text-muted uppercase font-bold block">
                 Funil de Novos Contratos
@@ -311,13 +396,13 @@ export default function DashboardView() {
       </div>
 
       {/* Horizontal Scrollable Construction Milestone Timeline Component */}
-      <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-3.5 mb-5">
+      <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-3.5 mb-5">
           <div>
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 flex items-center gap-1.5 leading-none">
+            <h3 className="text-xs font-bold font-heading uppercase tracking-wider text-foreground flex items-center gap-1.5 leading-none">
               <Flag className="h-4 w-4 text-primary animate-pulse" /> Cronograma de Marcos Próximos (Milestones)
             </h3>
-            <p className="text-[10px] text-zinc-500 font-sans mt-1">
+            <p className="text-[10px] text-muted font-sans mt-1">
               Calendário de marcos críticos das obras sob gestão. Clique em qualquer status para atualizar o canteiro.
             </p>
           </div>
@@ -380,11 +465,11 @@ export default function DashboardView() {
                   return (
                     <div
                       key={m.id}
-                      className="relative bg-white border border-zinc-200 hover:border-zinc-350 rounded-xl p-4 min-w-[280px] max-w-[300px] flex-1 flex flex-col justify-between hover:shadow-lg hover:shadow-black/[0.02] hover:-translate-y-0.5 transition-all duration-200 group z-10"
+                      className="relative bg-[hsl(var(--color-card))] backdrop-blur-md border border-[hsl(var(--color-border))] hover:border-primary/40 rounded-xl p-4 min-w-[280px] max-w-[300px] flex-1 flex flex-col justify-between hover:shadow-lg hover:shadow-black/[0.04] hover:-translate-y-0.5 transition-all duration-200 group z-10"
                     >
                       {/* Timeline Dot seated right on the horizontal connector */}
                       <div className="absolute -top-[19px] left-6 z-25 flex items-center justify-center">
-                        <span className={`h-2.5 w-2.5 rounded-full ring-4 ${dotColor} bg-white transition-all group-hover:scale-125`} />
+                        <span className={`h-2.5 w-2.5 rounded-full ring-4 ${dotColor} bg-[hsl(var(--color-card))] transition-all group-hover:scale-125`} />
                       </div>
 
                       <div>
@@ -430,21 +515,15 @@ export default function DashboardView() {
         </div>
       </div>
 
-      {/* Middle Grid - S-Curve Visual and Urgent action Tasks */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Curva S Global Chart */}
-        <section className="col-span-1 lg:col-span-8">
-          <PremiumCurvaChart />
-        </section>
-
-        {/* General urgent Tasks Action Board */}
-        <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5 lg:col-span-4 flex flex-col justify-between">
+      {/* General urgent Tasks Action Board */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white border border-border rounded-lg p-5 flex flex-col justify-between shadow-sm">
           <div>
-            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 flex items-center gap-1.5">
-                <ClipboardList className="h-4.5 w-4.5 text-amber-500" /> Tarefas Urgentes
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <h3 className="text-xs font-bold font-heading uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                <ClipboardList className="h-4.5 w-4.5 text-warning" /> Tarefas Urgentes
               </h3>
-              <span className="text-[10px] bg-amber-50 text-amber-600 font-mono font-bold px-1.5 py-0.5 rounded">
+              <span className="bg-amber-50 text-amber-600 font-mono font-bold px-1.5 py-0.5 rounded text-[10px]">
                 Eng. Berti
               </span>
             </div>
@@ -469,7 +548,7 @@ export default function DashboardView() {
                         setSelectedTaskForHours(t);
                         setLogHoursOpen(true);
                       }}
-                      className="px-2 py-1 bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-100 rounded text-[9.5px] font-semibold text-zinc-700 cursor-pointer flex items-center gap-1"
+                      className="px-2 py-1 bg-[hsl(var(--color-card))]/50 backdrop-blur border border-[hsl(var(--color-border))] hover:bg-secondary rounded text-[9.5px] font-semibold text-foreground cursor-pointer flex items-center gap-1"
                     >
                       <Play className="h-2.5 w-2.5 text-zinc-500" /> Lançar Horas
                     </button>
@@ -490,13 +569,13 @@ export default function DashboardView() {
       {/* Financial Ledger Log preview and Recent Activities block */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recents Accounting Table */}
-        <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4.5">
+        <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4.5">
             <div className="flex-1">
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 flex items-center gap-1.5 leading-none">
+              <h3 className="text-xs font-bold font-heading uppercase tracking-wider text-foreground flex items-center gap-1.5 leading-none">
                 Últimos Lançamentos Financeiros
               </h3>
-              <p className="text-[10px] text-zinc-500 font-sans mt-1">
+              <p className="text-[10px] text-muted font-sans mt-1">
                 Visão imediata de conciliação bancária e compras faturadas.
               </p>
             </div>
@@ -505,25 +584,25 @@ export default function DashboardView() {
                 setIsFinanceLoading(true);
                 setTimeout(() => setIsFinanceLoading(false), 1200);
               }}
-              className="p-1 px-2 border border-border bg-card rounded-md text-[9.5px] font-mono font-bold hover:bg-secondary cursor-pointer flex items-center gap-1 hover:border-primary/50 transition-colors shadow-xs"
+              className="px-2 py-1 bg-[hsl(var(--color-card))] backdrop-blur border border-[hsl(var(--color-border))] hover:bg-secondary rounded-md text-[10px] font-semibold text-foreground cursor-pointer flex items-center gap-1 transition-colors shadow-sm"
               title="Simular Carregamento"
             >
-              <RotateCcw className={`h-3 w-3 text-muted ${isFinanceLoading ? "animate-spin" : ""}`} />
+              <RotateCcw className={`h-3 w-3 ${isFinanceLoading ? "animate-spin" : ""}`} />
               Sincronizar
             </button>
           </div>
 
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto mt-4 rounded-lg border border-border">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-border/80">
-                  <th className="pb-2 text-[10px] font-mono uppercase font-bold text-muted">Descrição</th>
-                  <th className="pb-2 text-[10px] font-mono uppercase font-bold text-muted">Categoria</th>
-                  <th className="pb-2 text-[10px] font-mono uppercase font-bold text-muted text-right">Valor</th>
-                  <th className="pb-2 text-[10px] font-mono uppercase font-bold text-muted text-center">Status</th>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th className="text-right">Valor</th>
+                  <th className="text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-50 dark:divide-zinc-800/40">
+              <tbody>
                 {isFinanceLoading ? (
                   Array.from({ length: 4 }).map((_, n) => (
                     <tr key={n} className="animate-pulse">
@@ -574,13 +653,13 @@ export default function DashboardView() {
         </div>
 
         {/* Project operational summary table */}
-        <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4.5">
+        <div className="bg-white border border-border rounded-lg p-5 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4.5">
             <div>
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900">
+              <h3 className="text-xs font-bold font-heading uppercase tracking-wider text-foreground">
                 Resumo Operacional dos Portfólios
               </h3>
-              <p className="text-[10px] text-zinc-500 font-sans mt-0.5">
+              <p className="text-[10px] text-muted font-sans mt-0.5">
                 Métricas integradas de pessoal técnico e de campo.
               </p>
             </div>
@@ -620,12 +699,12 @@ export default function DashboardView() {
 
       {/* Interactive Logs Hours Drawer Widget */}
       {logHoursOpen && selectedTaskForHours && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-55 animate-fade-in">
-          <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-sm overflow-hidden font-sans animate-fade-in-scale">
-            <div className="p-4 bg-muted text-foreground flex items-center justify-between border-b border-border">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-55 animate-fade-in border-none">
+          <div className="bg-[hsl(var(--color-card))] backdrop-blur-2xl border border-[hsl(var(--color-border))] rounded-xl w-full max-w-sm overflow-hidden font-sans p-0 animate-fade-in-scale shadow-2xl">
+            <div className="p-4 bg-secondary text-foreground flex items-center justify-between border-b border-border">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-primary" />
-                <span className="text-xs font-bold uppercase font-mono tracking-wider">Apropriar Horas de Engenharia</span>
+                <span className="text-xs font-bold uppercase font-heading tracking-wider">Apropriar Horas de Engenharia</span>
               </div>
               <button 
                 onClick={() => setLogHoursOpen(false)} 
@@ -670,7 +749,7 @@ export default function DashboardView() {
                 <button
                   onClick={() => {
                     const { showToast } = useApp(); // Access showToast context on the fly
-                    showToast(`Apropriação bem-sucedida! Adicionadas ${loggedHours} horas à tarefa "${selectedTaskForHours.title}".`, "success");
+                    showToast(`Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.`, "success");
                     setLogHoursOpen(false);
                   }}
                   className="flex-1 py-2 bg-primary text-primary-foreground hover:opacity-90 font-sans font-semibold text-xs rounded cursor-pointer transition-all"

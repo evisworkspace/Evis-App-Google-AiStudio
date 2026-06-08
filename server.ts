@@ -3,11 +3,20 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import pkg from "whatsapp-web.js";
+const { Client, LocalAuth } = pkg;
+import qrcode from "qrcode";
 
 dotenv.config();
 
 const isProd = process.env.NODE_ENV === "production";
 const PORT = 3000;
+
+// In-memory Database for WhatsApp Messages
+const whatsappDB: { sender: string; body: string; timestamp: Date; groupId?: string }[] = [];
+let whatsappStatus = "DISCONNECTED";
+let whatsappQrCodeUrl = "";
+let wppClient: InstanceType<typeof Client> | null = null;
 
 async function startServer() {
   const app = express();
@@ -100,13 +109,13 @@ Interaja em português do Brasil e ofereça sugestões executivas úteis.`;
       return res.json({
         reply: `MODO DE SIMULAÇÃO ATIVO (CHAVE DE API AUSENTE)
 
-Como seu assistente EVIS (LIA) executivo de obras, posso ler suas obras ativas (Residencial Belle Vue, Residencial Kairo e Smart Tower Corporate), tarefas pendentes e status financeiro.
+Olá! Sou o Maestro Operacional (Roteador de IA). Como seu orquestrador central executivo de obras, posso ler suas obras ativas (Residencial Belle Vue, Residencial Kairo e Smart Tower Corporate), tarefas pendentes e status financeiro.
 
 Experimente sugerir comandos de redirecionamento como:
 - "Ir para o diário do Residencial Belle Vue"
 - "Abrir orçamentista do Residencial Kairo"
 
-Adicione sua de chaves de API nas configurações do AI Studio para ativar as consultas de IA completas operadas por LLM!`,
+*Adicione sua chave de API nas configurações do AI Studio para ativar as consultas operadas por LLM!*`,
         type: "geral"
       });
     }
@@ -439,7 +448,7 @@ REGRA CRÍTICA COMPORTAMENTAL: Ao fornecer suas respostas e pareceres, NUNCA uti
     }
   });
 
-  // AGENTE 4 — DIÁRIO (RDO por texto)
+  // AGENTE 4 — DIÁRIO DE OBRAS IA (Motor Semântico de RDO)
   // Rota: POST /api/ai/diario
   app.post("/api/ai/diario", async (req, res) => {
     const { idRefurbish, transcricao, dataReferencia } = req.body;
@@ -449,43 +458,71 @@ REGRA CRÍTICA COMPORTAMENTAL: Ao fornecer suas respostas e pareceres, NUNCA uti
 
     const ai = getAiClient();
     if (!ai) {
-      // Return beautiful structured simulation for HITL dialog interface
+      // Simulação estruturada baseada no Motor Semântico
       return res.json({
-        clima: "sunny",
-        trabalhadores: 32,
-        equipamentos: ["1 Betoneira Elétrica 400L", "2 Vibradores de Imersão Bosch", "Ferramental Manual de Carpintaria"],
-        atividades: ["Montagem de formas de caixaria do 13º nível", "Escoramento metálico e amarração de aço CA-50 estrutural para pilares periféricos"],
-        observacoes: "Logística interna correu perfeitamente. Caminhão com usina de concreto atrasou 45 minutos mas a concretagem foi finalizada sem perdas de pega do cimento.",
-        confianca: 0.94,
-        requerConfirmacao: false
+        tipoRegistro: "AVANCO_OBRA",
+        eventos: ["CONCRETAGEM_EXECUTADA", "INTERRUPCAO_POR_FALTA_MATERIAL"],
+        entidades: {
+          servico: "Concretagem de laje",
+          pavimento: "Segundo pavimento",
+          materialFaltante: "Brita"
+        },
+        dominios: ["PRODUCAO", "SUPRIMENTOS", "CRONOGRAMA"],
+        impactos: ["Possível atraso parcial da atividade", "Interrupção operacional da equipe"],
+        acoesSugeridas: ["Validar impacto no cronograma", "Registrar falta de material", "Atualizar avanço estrutural"],
+        necessitaValidacaoHumana: true,
+        confidenceScore: "ALTO",
+        resumoOperacional: "[SIMULAÇÃO OFFLINE] Concretagem parcial executada com interrupção causada por falta de brita."
       });
     }
 
     try {
-      const systemInstruction = `Você é um Analista Técnico Civil encarregado de higienizar transcrições orais informais gravadas por engenheiros em campo para preenchimento estruturado do Relatório Diário de Obra (RDO) do ERP corporativo.
-Analise a transcrição para texto, selecione as atividades técnicas, conte o volume de operários, deduza o clima em exato formato (sunny | cloudy | rainy | stormy), a lista de ferramentas/máquinas utilizadas e armazene atrasos ou observações logísticas pertinentes.
-Retorne um fator de \`confianca\` entre 0.0 e 1.0. Marque \`requerConfirmacao\` como true caso a confiança seja menor que 0.70.
-Retorne rigorosamente um JSON estruturado em português do Brasil sem markdown externo.`;
+      const systemInstruction = `Você é o agente operacional "Diário de Obras IA" do sistema EVIS.
+Sua função NÃO é conversar genericamente. Você é o motor semântico operacional da obra.
+Seu papel é estruturar semanticamente informações (texto, transcrição de áudio, observações da obra) para capturar o estado real da obra.
+
+OBJETIVOS:
+1. Detectar eventos operacionais.
+2. Extrair entidades relevantes.
+3. Classificar o domínio do evento.
+4. Identificar impactos.
+5. Gerar propostas estruturadas.
+6. Informar nível de confiança.
+7. Solicitar validação humana quando necessário.
+
+ENTIDADES (Extraia): serviços, equipes, materiais, pavimentos, ambientes, fornecedores, equipamentos, quantidades, datas, problemas, atrasos, retrabalhos, clima, produtividade.
+
+DOMÍNIOS: PRODUCAO, CRONOGRAMA, FINANCEIRO, QUALIDADE, SEGURANCA, SUPRIMENTOS, CLIMA, RISCO, RETRABALHO.
+
+REGRAS:
+- Nunca invente informações ausentes.
+- Quando houver baixa confiança: sinalize ambiguidade, solicite confirmação, evite decisões automáticas.
+- Você NÃO PODE atualizar dados permanentemente, você apenas PROPÕE alterações.
+
+SCORE DE CONFIANÇA: ALTO, MEDIO, BAIXO.
+NÃO use markdown na resposta json.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
-        contents: `ID de Obra: "${idRefurbish}"\nData de Referência: "${dataReferencia || new Date().toISOString()}"\nTranscrição enviada pelo Engenheiro Técnico em campo:\n"""\n${transcricao}\n"""`,
+        contents: `ID de Obra: "${idRefurbish}"\nData de Referência: "${dataReferencia || new Date().toISOString()}"\nInformação/Transcrição do campo:\n"""\n${transcricao}\n"""`,
         config: {
           systemInstruction,
-          temperature: 0.2,
+          temperature: 0.1,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              clima: { type: Type.STRING, description: "Classificação do clima como 'sunny', 'cloudy', 'rainy', ou 'stormy'." },
-              trabalhadores: { type: Type.NUMBER, description: "Soma total de pessoas mencionadas em campo." },
-              equipamentos: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Insumos de maquinários ou ferramentas (ex: Grua, Betoneira, Caminhão)" },
-              atividades: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Sumarização técnica das principais atividades efetuadas no canteiro" },
-              observacoes: { type: Type.STRING, description: "Observações, anomalias, atrasadores ou comentários de campo técnicos" },
-              confianca: { type: Type.NUMBER, description: "Nível de certeza global de interpretação com valor no range de 0.0 a 1.0" },
-              requerConfirmacao: { type: Type.BOOLEAN, description: "Verdadeiro se a confiança de conversão e entendimento é menor ou igual a 0.70" }
+              tipoRegistro: { type: Type.STRING, description: "AVANCO_OBRA, OCORRENCIA_DIARIA, ENTRADA_MATERIAL, etc." },
+              eventos: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista de eventos identificados formatados (ex: CONCRETAGEM_EXECUTADA)" },
+              entidades: { type: Type.OBJECT, description: "Chave-valor de entidades identificadas", additionalProperties: { type: Type.STRING } },
+              dominios: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Domínios classificados (PRODUCAO, CRONOGRAMA, etc)" },
+              impactos: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Impactos descritivos na obra ou prazo" },
+              acoesSugeridas: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Ações a realizar" },
+              necessitaValidacaoHumana: { type: Type.BOOLEAN, description: "Se as alterações propostas precisam de HITL (Sempre true para ações críticas)" },
+              confidenceScore: { type: Type.STRING, description: "Nível de confiança: ALTO, MEDIO, ou BAIXO" },
+              resumoOperacional: { type: Type.STRING, description: "Descrição compacta e amigável da situação" }
             },
-            required: ["clima", "trabalhadores", "equipamentos", "atividades", "observacoes", "confianca", "requerConfirmacao"]
+            required: ["tipoRegistro", "eventos", "entidades", "dominios", "impactos", "acoesSugeridas", "necessitaValidacaoHumana", "confidenceScore", "resumoOperacional"]
           }
         }
       });
@@ -493,14 +530,135 @@ Retorne rigorosamente um JSON estruturado em português do Brasil sem markdown e
       const parsed = JSON.parse(response.text || "{}");
       res.json(parsed);
     } catch (err: any) {
-      console.error("Gemini Agente Diario RDO Error:", err);
-      res.status(500).json({ error: "Erro de parsing do diário RDO em lote: " + err.message });
+      console.error("Gemini Agente Diario Motor RDO Error:", err);
+      res.status(500).json({ error: "Erro de parsing do motor semântico RDO: " + err.message });
     }
   });
 
 // ==========================================
   // ZAPPFY WHATSAPP INTEGRATIONS (OMNICHANNEL EVIS)
   // ==========================================
+
+  // Inicializa o Motor do WhatsApp (Microservico Embutido)
+  app.post("/api/whatsapp/start", async (req, res) => {
+    if (wppClient && whatsappStatus === "CONNECTED") {
+      return res.json({ status: whatsappStatus, message: "Já conectado." });
+    }
+    
+    if (whatsappStatus === "INITIALIZING") {
+      return res.json({ status: whatsappStatus });
+    }
+
+    whatsappStatus = "INITIALIZING";
+
+    try {
+      wppClient = new Client({
+        authStrategy: new LocalAuth(),
+        puppeteer: {
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        }
+      });
+
+      wppClient.on("qr", async (qr) => {
+        whatsappStatus = "QR_READY";
+        whatsappQrCodeUrl = await qrcode.toDataURL(qr);
+      });
+
+      wppClient.on("ready", () => {
+        whatsappStatus = "CONNECTED";
+        whatsappQrCodeUrl = "";
+        console.log("WhatsApp Client is ready!");
+      });
+
+      wppClient.on("message", async (msg) => {
+        // Save to our in-memory DB (simulating real DB)
+        const contact = await msg.getContact();
+        whatsappDB.push({
+          sender: contact.name || contact.number,
+          body: msg.body,
+          timestamp: new Date(),
+          groupId: msg.from
+        });
+      });
+
+      wppClient.on("disconnected", () => {
+        whatsappStatus = "DISCONNECTED";
+        whatsappQrCodeUrl = "";
+        wppClient = null;
+      });
+
+      wppClient.initialize().catch(err => {
+        console.error("WhatsApp Init Error:", err);
+        whatsappStatus = "ERROR";
+      });
+
+      res.json({ status: "INITIALIZING", message: "Inicializando navegador Chrome headless..." });
+    } catch (err: any) {
+      whatsappStatus = "ERROR";
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Rota para o frontend buscar o status e o QR Code
+  app.get("/api/whatsapp/status", (req, res) => {
+    res.json({
+      status: whatsappStatus,
+      qrCode: whatsappQrCodeUrl,
+      messagesCount: whatsappDB.length
+    });
+  });
+
+  // Rota para ler as mensagens salvas via API (Chat Interno)
+  app.get("/api/whatsapp/messages", (req, res) => {
+    // Retorna as ultimas 50
+    res.json(whatsappDB.slice(-50));
+  });
+
+  // Função Simulada do Cron Job de Inteligência
+  app.post("/api/whatsapp/cron-analyze", async (req, res) => {
+    const ai = getAiClient();
+    if (!ai) {
+      return res.json({
+         lembretes: ["Lembrete de fazer a medição (Simulado)"],
+         materiais: ["Cimento CP-II (Simulado)"],
+         decisoes: ["Entrega remarcada p/ 8h (Simulado)"]
+      });
+    }
+
+    const messagesText = whatsappDB.slice(-50).map(m => `[${m.timestamp.toLocaleTimeString()}] ${m.sender}: ${m.body}`).join("\n");
+    if (!messagesText) {
+      return res.json({ message: "Nenhuma mensagem recente para analisar." });
+    }
+
+    const prompt = `Você é um assistente de engenharia civil. Leia o registro de chat abaixo entre a equipe da obra.
+Extraia exatamente as seguintes informações no formato JSON com as chaves "lembretes", "materiais", e "decisoes" (arrays de string).
+
+Mensagens:
+${messagesText}`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          temperature: 0.1,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              lembretes: { type: Type.ARRAY, items: { type: Type.STRING } },
+              materiais: { type: Type.ARRAY, items: { type: Type.STRING } },
+              decisoes: { type: Type.ARRAY, items: { type: Type.STRING } }
+            }
+          }
+        }
+      });
+      res.json(JSON.parse(response.text || "{}"));
+      // Em um cenário real faria a deleção/arquivamento das mensagens já lidas.
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   
   app.post("/api/whatsapp/send", async (req, res) => {
     const { phone, message } = req.body;

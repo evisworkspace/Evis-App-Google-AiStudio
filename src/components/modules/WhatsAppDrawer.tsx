@@ -14,25 +14,94 @@ interface WhatsAppDrawerProps {
 }
 
 export function WhatsAppWebBridge() {
+  const [status, setStatus] = useState("DISCONNECTED");
+  const [qrCode, setQrCode] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch("/api/whatsapp/status");
+      const data = await res.json();
+      setStatus(data.status);
+      setQrCode(data.qrCode || "");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleConnect = async () => {
+    setLoading(true);
+    setStatus("INITIALIZING");
+    try {
+      await fetch("/api/whatsapp/start", { method: "POST" });
+    } catch(err) {
+      console.log(err);
+    }
+    setLoading(false);
+  };
+
   return (
-    <div className="flex-1 w-full h-full bg-[#111b21] relative flex flex-col">
-      {/* Aviso sobre X-Frame-Options */}
-      <div className="absolute top-0 left-0 w-full bg-amber-500/90 text-amber-950 p-3 text-xs z-10 flex items-start gap-3 shadow-md backdrop-blur-md">
-        <MonitorSmartphone className="h-5 w-5 shrink-0" />
-        <div>
-          <p className="font-bold uppercase tracking-tight mb-0.5">Aviso de Limitação do Navegador (Iframe Bloqueado)</p>
-          <p className="leading-relaxed">
-            O WhatsApp (Meta) bloqueia ativamente o seu cliente web de ser carregado dentro de Iframes em outros sites por motivos de segurança (usando cabeçalhos <code className="bg-amber-900/10 px-1 rounded font-mono">X-Frame-Options: DENY</code>). Apenas aplicativos Desktop (Electron) ou extensões de navegador conseguem burlar isso. 
-            No navegador, a tela abaixo ficará em branco ou exibirá um erro de conexão. Para CRMs Web, a abordagem via API Oficial ou Backend (recriando a interface) é obrigatória.
-          </p>
+    <div className="flex-1 w-full h-full bg-[#111b21] relative flex flex-col items-center justify-center p-6">
+      <div className="flex flex-col items-center text-center p-8 bg-[#202c33] rounded-2xl max-w-lg border border-[#2a3942]">
+        <div className="w-16 h-16 rounded-full bg-[#00a884]/10 flex items-center justify-center mb-6">
+          <MonitorSmartphone className="h-8 w-8 text-[#00a884]" />
         </div>
+        <h2 className="text-[#e9edef] text-xl font-bold mb-3">Conexão WhatsApp Servidor</h2>
+        
+        {status === "DISCONNECTED" && (
+          <>
+            <p className="text-[#aebac1] mb-6 leading-relaxed text-sm">
+              Conecte o celular corporativo da obra para que a IA (Lia) possa escutar, extrair tarefas, materiais e registrar diários automaticamente.
+            </p>
+            <button 
+              onClick={handleConnect}
+              disabled={loading}
+              className="bg-[#00a884] hover:bg-[#029072] disabled:opacity-50 text-[#111b21] px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center gap-2 cursor-pointer"
+            >
+              🚀 Conectar Celular da Obra
+            </button>
+          </>
+        )}
+
+        {status === "INITIALIZING" && (
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 border-4 border-[#00a884] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-[#aebac1] text-sm">Iniciando motor Chrome local. Aguarde o QR Code...</p>
+          </div>
+        )}
+
+        {status === "QR_READY" && (
+          <div className="flex flex-col items-center">
+            <p className="text-[#e9edef] bg-emerald-900/40 border border-emerald-500/50 px-4 py-2 rounded-lg font-mono text-sm mb-4">
+              Escaneie o QR Code abaixo com seu WhatsApp
+            </p>
+            {qrCode && (
+              <div className="bg-white p-4 rounded-xl shadow-lg">
+                <img src={qrCode} alt="QR Code WhatsApp" className="w-64 h-64 mx-auto" />
+              </div>
+            )}
+            <p className="text-[#aebac1] mt-4 text-xs">O QR code recarrega automaticamente.</p>
+          </div>
+        )}
+
+        {status === "CONNECTED" && (
+          <div className="flex flex-col items-center">
+            <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-10 w-10 text-[#00a884]" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Aparelho Escutando...</h3>
+            <p className="text-[#aebac1] text-sm max-w-sm">
+              A inteligência EVIS LIA agora está monitorando as conversas, escutando áudios e gerando insights em background (Cron Ativo).
+            </p>
+          </div>
+        )}
       </div>
-      <iframe 
-        src="https://web.whatsapp.com" 
-        className="w-full h-full pt-20 border-none bg-white" 
-        title="WhatsApp Web Bridge"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-      />
     </div>
   );
 }
@@ -64,6 +133,7 @@ interface Chat {
 }
 
 const mockChats: Chat[] = [
+  { id: "whatsapp-real", name: "WhatsApp Servidor (DB)", lastMessage: "Mensagens reais do cliente rodando no server...", time: "Agora", unread: 0, project: "Geral" },
   { id: "1", name: "Evandro - Berti Construtora", lastMessage: "Olá! Tenho interesse nos seguin...", time: "01:50", unread: 2, project: "Residencial Berti" },
   { id: "2", name: "Sérgio (Mestre de Obras)", lastMessage: "▶ Áudio (0:15) - Concretagem...", time: "11:27", unread: 1, project: "Residencial Berti" },
   { id: "3", name: "Reginaldo - Cliente Alphaville", lastMessage: "Fala Evandro de boa assinatura", time: "12:37", unread: 0, project: "Obra Alphaville" },
@@ -130,15 +200,44 @@ export default function WhatsAppDrawer({ isOpen, onClose }: WhatsAppDrawerProps)
     ]
   };
 
-  const [messages, setMessages] = useState<Message[]>(allMessages["3"]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [realMessages, setRealMessages] = useState<any[]>([]);
+
+  // Fetch real messages from backend
+  useEffect(() => {
+    const fetchRealMessages = async () => {
+      try {
+        const res = await fetch("/api/whatsapp/messages");
+        const data = await res.json();
+        setRealMessages(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchRealMessages();
+    const interval = setInterval(fetchRealMessages, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
-    if (allMessages[activeChatId]) {
-      setMessages(allMessages[activeChatId]);
+    // If we have real DB messages, format them and prepend simulated
+    if (activeChatId === "whatsapp-real") {
+       const formattedReal: Message[] = realMessages.map((m: any, i) => ({
+         id: `real_${i}`,
+         text: m.body,
+         sender: m.sender === "me" ? "me" : "client",
+         timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+         status: "read"
+       }));
+       setMessages(formattedReal);
     } else {
-      setMessages([]);
+      if (allMessages[activeChatId]) {
+        setMessages(allMessages[activeChatId]);
+      } else {
+        setMessages([]);
+      }
     }
-  }, [activeChatId]);
+  }, [activeChatId, realMessages]);
   const [inputValue, setInputValue] = useState("");
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -226,7 +325,7 @@ export default function WhatsAppDrawer({ isOpen, onClose }: WhatsAppDrawerProps)
         project: project.id
       };
       setTasks(prev => [newTask, ...prev]);
-      showToast(`Tarefa '${newTask.title}' criada com sucesso!`, "success");
+      showToast(`Ambiente simulado: Nenhuma ação real. Tarefa '${newTask.title}' simulada!`, "success");
     } else {
       showToast(`Ação registrada: ${aiAnalysis.actionRequired}`, "info");
     }

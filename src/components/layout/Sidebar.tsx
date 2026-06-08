@@ -26,18 +26,25 @@ import {
   CircleCheck,
   Zap,
   Building,
-  DollarSign
+  DollarSign,
+  Bot,
+  X
 } from "lucide-react";
 
 export default function Sidebar() {
-  const { currentRoute, setCurrentRoute, sidebarOpen, setSidebarOpen } = useApp();
+  const { currentRoute, setCurrentRoute, sidebarOpen, setSidebarOpen, getActiveProject } = useApp();
   const [financeiroExpanded, setFinanceiroExpanded] = useState(true);
 
   if (!sidebarOpen) return null;
 
   const navigate = (route: MenuRoute) => {
     setCurrentRoute(route);
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
   };
+  
+  const currentObra = getActiveProject();
 
   const financeiroItems = [
     { label: "Resumo", route: "financeiro-resumo" as MenuRoute, icon: CircleCheck },
@@ -66,7 +73,7 @@ export default function Sidebar() {
   return (
     <aside
       id="evis_sidebar"
-      className="w-64 h-full shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col justify-between overflow-y-auto select-none font-sans"
+      className="absolute inset-y-0 left-0 z-50 w-full md:relative md:w-[280px] h-full shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col justify-between overflow-y-auto select-none font-sans transition-colors duration-200 print:hidden"
     >
       {/* Upper Area */}
       <div>
@@ -87,9 +94,9 @@ export default function Sidebar() {
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="md:hidden text-sidebar-muted hover:text-white transition-colors cursor-pointer"
+            className="md:hidden text-sidebar-muted hover:text-white transition-colors cursor-pointer p-2 rounded-lg hover:bg-white/10"
           >
-            <ChevronRight className="h-4 w-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -101,11 +108,11 @@ export default function Sidebar() {
               onClick={() => navigate("dashboard")}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
                 currentRoute === "dashboard"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-md"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
-              <LayoutDashboard className={`h-4 w-4 ${currentRoute === "dashboard" ? "text-sidebar-primary animate-pulse" : "text-sidebar-muted"}`} />
+              <LayoutDashboard className={`h-4 w-4 ${currentRoute === "dashboard" ? "text-primary animate-pulse" : "text-sidebar-muted"}`} />
               Painel de Controle
             </button>
           </div>
@@ -119,77 +126,74 @@ export default function Sidebar() {
               onClick={() => navigate("oportunidades")}
               className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
                 currentRoute === "oportunidades"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
-              <Briefcase className="h-4 w-4 text-sidebar-muted" />
+              <Briefcase className={`h-4 w-4 ${currentRoute === "oportunidades" ? "text-primary" : "text-sidebar-muted"}`} />
               Oportunidades (CRM)
             </button>
             <button
               onClick={() => navigate("obras")}
               className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
                 currentRoute === "obras"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
-              <HardHat className="h-4 w-4 text-sidebar-muted" />
-              Projetos (Obras)
+              <LayoutDashboard className={`h-4 w-4 ${currentRoute === "obras" ? "text-primary" : "text-sidebar-muted"}`} />
+              Projetos (Visão Global)
+            </button>
+            <button
+              onClick={() => navigate("obra-detail")}
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
+                currentRoute === "obra-detail"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-[3px] border-primary shadow-sm"
+                  : "text-sidebar-foreground border-l-[3px] border-transparent hover:bg-sidebar-accent/50"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <HardHat className={`h-4 w-4 ${currentRoute === "obra-detail" ? "text-primary" : "text-sidebar-muted"}`} />
+                <span className="truncate max-w-[150px]">{currentObra?.name || "Detalhe da Obra"}</span>
+              </div>
             </button>
             <button
               onClick={() => navigate("tarefas")}
               className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
                 currentRoute === "tarefas"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
-              <CheckCircle2 className="h-4 w-4 text-sidebar-muted" />
+              <CheckCircle2 className={`h-4 w-4 ${currentRoute === "tarefas" ? "text-primary" : "text-sidebar-muted"}`} />
               Tarefas de Engenharia
             </button>
             <button
               onClick={() => navigate("workspace")}
               className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
                 currentRoute === "workspace"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Cloud className="h-4 w-4 text-sidebar-primary" />
+                <Cloud className={`h-4 w-4 ${currentRoute === "workspace" ? "text-primary" : "text-sidebar-primary"}`} />
                 <span>Google Workspace</span>
               </div>
-              <span className="h-2 w-2 rounded-full bg-sidebar-primary animate-pluse border border-[hsl(var(--color-background))]"></span>
-            </button>
-          </div>
-
-          {/* Group: Operations */}
-          <div className="space-y-1">
-            <span className="px-3 text-[10px] font-mono font-bold text-sidebar-muted uppercase tracking-wider block mb-1">
-              Operações
-            </span>
-            <button
-              onClick={() => navigate("compras")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "compras"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
-              }`}
-            >
-              <ShoppingCart className="h-4 w-4 text-sidebar-muted" />
-              Compras & Insumos
+              <span className="h-2 w-2 rounded-full bg-sidebar-primary animate-pulse border border-[hsl(var(--color-background))]"></span>
             </button>
             <button
-              onClick={() => navigate("estoque")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "estoque"
-                  ? "bg-sidebar-accent/75 text-white border-l-4 border-sidebar-primary shadow-lg shadow-sidebar-primary/5"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+              onClick={() => navigate("mapa-agentes")}
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
+                currentRoute === "mapa-agentes"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
               }`}
             >
-              <Boxes className="h-4 w-4 text-sidebar-muted" />
-              Estoque Físico
+              <div className="flex items-center gap-2.5">
+                <Bot className={`h-4 w-4 ${currentRoute === "mapa-agentes" ? "text-purple-600" : "text-purple-500"}`} />
+                <span>Central de Agentes IA</span>
+              </div>
             </button>
           </div>
 
@@ -197,10 +201,10 @@ export default function Sidebar() {
           <div className="space-y-1">
             <button
               onClick={() => setFinanceiroExpanded(!financeiroExpanded)}
-              className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono font-bold text-sidebar-muted uppercase tracking-wider hover:text-white transition-all text-left cursor-pointer group"
+              className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono font-bold text-sidebar-muted uppercase tracking-wider hover:text-sidebar-foreground transition-all text-left cursor-pointer group"
             >
               <span>Financeiro Obra</span>
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 transform ${financeiroExpanded ? "rotate-180 text-white" : "rotate-0"}`} />
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 transform ${financeiroExpanded ? "rotate-180 text-sidebar-foreground" : "rotate-0"}`} />
             </button>
             
             {financeiroExpanded && (
@@ -214,11 +218,11 @@ export default function Sidebar() {
                       onClick={() => navigate(fi.route)}
                       className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded transition-all duration-150 cursor-pointer hover:translate-x-0.5 ${
                         isActive
-                          ? "bg-sidebar-accent text-white font-semibold"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/30"
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                       }`}
                     >
-                      <Icon className={`h-3.5 w-3.5 ${isActive ? "text-sidebar-primary animate-bounce-in" : "opacity-75"}`} />
+                      <Icon className={`h-3.5 w-3.5 ${isActive ? "text-primary animate-bounce-in" : "text-sidebar-muted"}`} />
                       {fi.label}
                     </button>
                   );
@@ -242,11 +246,11 @@ export default function Sidebar() {
                   onClick={() => navigate(cad.route)}
                   className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${
                     currentRoute === cad.route
-                      ? "text-white font-semibold"
-                      : "text-sidebar-foreground/80 hover:text-white"
+                      ? "text-sidebar-accent-foreground font-semibold bg-sidebar-accent"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                   }`}
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary"></span>
+                  <span className={`h-1.5 w-1.5 rounded-full ${currentRoute === cad.route ? "bg-primary" : "bg-sidebar-muted"}`}></span>
                   {cad.label}
                 </button>
               ))}
@@ -261,11 +265,11 @@ export default function Sidebar() {
                   onClick={() => navigate(conf.route)}
                   className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${
                     currentRoute === conf.route
-                      ? "text-white font-semibold"
-                      : "text-sidebar-foreground/80 hover:text-white"
+                      ? "text-sidebar-accent-foreground font-semibold bg-sidebar-accent"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                   }`}
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-sidebar-muted"></span>
+                  <span className={`h-1.5 w-1.5 rounded-full ${currentRoute === conf.route ? "bg-primary" : "bg-sidebar-muted"}`}></span>
                   {conf.label}
                 </button>
               ))}

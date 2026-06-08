@@ -21,7 +21,8 @@ import {
   CheckCircle,
   Clock,
   Trash2,
-  Info
+  Info,
+  Sparkles
 } from "lucide-react";
 
 export default function FinanceiroView() {
@@ -60,7 +61,7 @@ export default function FinanceiroView() {
 
     setNewDesc("");
     setNewAmount("");
-    alert("Lançamento financeiro registrado com sucesso! O caixa técnico foi reconciliado.");
+    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
   };
 
   const handleTransfer = (e: React.FormEvent) => {
@@ -84,7 +85,7 @@ export default function FinanceiroView() {
     addLancamento(`Transferência: Entrada vinda de ${source?.name}`, parsed, "receita", "Transferência", toAcc);
 
     setTransferAmount("");
-    alert(`Transferência de R$ ${parsed.toLocaleString()} realizada com sucesso entre as contas e reconciliada!`);
+    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
   };
 
   const deleteTransaction = (id: string) => {
@@ -106,6 +107,30 @@ export default function FinanceiroView() {
       {/* -------------------- RESUMO -------------------- */}
       {currentRoute === "financeiro-resumo" && (
         <div className="space-y-6">
+          {/* Vera Financeira (Auditora de Caixa) */}
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/40 rounded-lg p-5 shadow-sm">
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-400 mb-2 flex items-center gap-2">
+               <Sparkles className="h-4 w-4" /> Vera Financeira (Auditora de Caixa)
+            </h3>
+            <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">
+               Contas conciliadas com sucesso. O caixa projetado fica pressionado neste período.<br/>
+               Esta despesa no "Residencial Kairo" pode comprometer a margem da obra.<br/>
+               Lançamentos financeiros exigem confirmação.
+            </p>
+            <div className="mt-3 flex gap-3">
+               <button className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-all cursor-pointer rounded shadow-sm"
+                 onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+               >
+                 Analisar impactos do Kairo
+               </button>
+               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer rounded shadow-sm"
+                 onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+               >
+                 Simular projeção (30 dias)
+               </button>
+            </div>
+          </div>
+
           {/* Quick Bank Accounts Balances Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {accounts.map((acc) => (
@@ -408,7 +433,7 @@ export default function FinanceiroView() {
                     ];
 
                     const url = await createGoogleSheet(token!, `EVIS - Diário Fluxo de Caixa ${new Date().toLocaleDateString('pt-BR')}`, rows);
-                    alert(`Planilha exportada com sucesso! Link: ${url}`);
+                    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
                     window.open(url, "_blank");
                   } catch(e: any) {
                     alert(`Erro exportando Sheets: ${e.message}`);

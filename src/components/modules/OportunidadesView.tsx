@@ -332,6 +332,28 @@ export default function OportunidadesView() {
         </div>
       </div>
 
+      {/* Lia Comercial Insights Layer */}
+      <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/40 rounded-xl p-5 mb-6 shadow-sm">
+         <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-purple-800 dark:text-purple-400 mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4" /> Lia Comercial (Analista de CRM)
+         </h3>
+         <p className="text-sm font-semibold text-purple-950 dark:text-purple-100 mb-3">
+            Este lead <span className="font-bold underline decoration-purple-300">Residencial Kairo</span> parece quente porque demonstrou urgência e pediu retorno rápido. <span className="text-orange-600 block mt-1">Sugiro contato em até 24 horas. Posso preparar um briefing para orçamento, mas você confirma antes.</span>
+         </p>
+         <div className="flex gap-3">
+            <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer shadow-sm transition-all"
+               onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+            >
+              Preparar briefing para orçamento
+            </button>
+            <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 cursor-pointer shadow-sm transition-all"
+               onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+            >
+              Gerar rascunho de engajamento (Gmail)
+            </button>
+         </div>
+      </div>
+
       <AnimatePresence mode="wait">
         {viewMode === "lista" ? (
           <motion.div 

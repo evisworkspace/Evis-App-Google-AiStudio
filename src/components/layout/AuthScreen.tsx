@@ -20,7 +20,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-app-surface text-foreground flex items-center justify-center p-4 font-sans antialiased">
+    <div className="min-h-screen flex text-foreground items-center justify-center p-4 font-sans antialiased">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

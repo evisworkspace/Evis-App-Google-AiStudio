@@ -92,10 +92,12 @@ export type MenuRoute =
   | "dashboard"
   | "oportunidades"
   | "obras"
+  | "obra-detail"
   | "tarefas"
   | "compras"
   | "estoque"
   | "workspace"
+  | "mapa-agentes"
   | "financeiro-resumo"
   | "financeiro-receitas"
   | "financeiro-despesas"
@@ -113,7 +115,7 @@ export type MenuRoute =
   | "configuracoes-equipe"
   | "planos";
 
-export type AppTheme = "claro" | "escuro" | "premium";
+export type AppTheme = "claro" | "escuro" | "hibrido";
 
 export const INITIAL_OBRAS: Obra[] = [
   {
