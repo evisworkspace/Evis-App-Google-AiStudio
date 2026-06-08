@@ -3,9 +3,11 @@ import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
-import pkg from "whatsapp-web.js";
-const { Client, LocalAuth } = pkg;
-import qrcode from "qrcode";
+// whatsapp-web.js e qrcode — instalar quando ativar integração WhatsApp
+// npm install whatsapp-web.js qrcode @types/qrcode
+const Client: any = class { on() {} initialize() { return Promise.resolve(); } };
+const LocalAuth: any = class {};
+const qrcode = { toDataURL: async (_: string) => "" };
 
 dotenv.config();
 
