@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import type { User } from "firebase/auth";
+import { auth } from "../lib/auth";
 import {
   Obra,
   Oportunidade,
@@ -25,6 +28,9 @@ export interface Toast {
 }
 
 interface AppContextType {
+  currentUser: User | null;
+  authLoading: boolean;
+
   // Navigation & Shell Layout
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -32,12 +38,6 @@ interface AppContextType {
   setCurrentRoute: (route: MenuRoute) => void;
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
-  isWhatsAppOpen: boolean;
-  setIsWhatsAppOpen: (open: boolean) => void;
-  
-  // Auth state
-  currentUser: any | null;
-  authLoading: boolean;
   
   // Active states
   selectedProjectId: string;
@@ -78,37 +78,30 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentRoute, setCurrentRoute] = useState<MenuRoute>("dashboard");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("ob_1");
   const [activeSubTab, setActiveSubTab] = useState<string>("geral");
-  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   
-  // Auth states
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Load auth state (Ignored temporarily to pass login easily)
-  useEffect(() => {
-    // Fake login
-    setCurrentUser({
-      displayName: "Engenheiro Berti",
-      email: "berti@curitibaconstrutora.com.br",
-      photoURL: null,
-      uid: "fake_uid_123"
-    });
-    setAuthLoading(false);
-  }, []);
-
   const [theme, setThemeState] = useState<AppTheme>(() => {
     const saved = localStorage.getItem("evis_theme") as AppTheme;
-    return saved === "claro" || saved === "escuro" || saved === "hibrido" ? saved : "claro";
+    return saved === "claro" || saved === "escuro" || saved === "premium" ? saved : "claro";
   });
 
   useEffect(() => {
     localStorage.setItem("evis_theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const setTheme = (t: AppTheme) => {
     setThemeState(t);
@@ -254,16 +247,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider
       value={{
+        currentUser,
+        authLoading,
         sidebarOpen,
         setSidebarOpen,
         currentRoute,
         setCurrentRoute,
         theme,
         setTheme,
-        isWhatsAppOpen,
-        setIsWhatsAppOpen,
-        currentUser,
-        authLoading,
         selectedProjectId,
         setSelectedProjectId,
         activeSubTab,

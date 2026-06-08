@@ -1,20 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { 
-  initializeAuth, 
-  browserLocalPersistence, 
-  browserPopupRedirectResolver, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  User 
-} from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
-const auth = initializeAuth(app, {
-  persistence: browserLocalPersistence,
-  popupRedirectResolver: browserPopupRedirectResolver,
-});
+const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
 // Request Workspace scopes
@@ -24,14 +13,13 @@ provider.addScope("https://www.googleapis.com/auth/spreadsheets");
 provider.addScope("https://www.googleapis.com/auth/gmail.send");
 
 let isSigningIn = false;
-let signInPromise: Promise<{ user: User; accessToken: string } | null> | null = null;
 let cachedAccessToken: string | null = null;
 
 export const initAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  return onAuthStateChanged(auth, (user: User | null) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
       if (cachedAccessToken) {
         if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
@@ -47,43 +35,22 @@ export const initAuth = (
 };
 
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
-  if (isSigningIn) {
-    if (signInPromise) {
-      return signInPromise;
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error("Failed to get access token from Firebase Auth");
     }
-    return null;
+
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error("Sign in error:", error);
+    throw error;
+  } finally {
+    isSigningIn = false;
   }
-
-  isSigningIn = true;
-  signInPromise = (async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential?.accessToken) {
-        throw new Error("Failed to get access token from Firebase Auth");
-      }
-
-      cachedAccessToken = credential.accessToken;
-      return { user: result.user, accessToken: cachedAccessToken };
-    } catch (error: any) {
-      if (
-        error.code === 'auth/cancelled-popup-request' || 
-        error.code === 'auth/popup-closed-by-user' ||
-        error.message?.includes("cancelled-popup") ||
-        error.message?.includes("closed-by-user")
-      ) {
-        console.warn("User closed the sign-in popup.");
-        return null;
-      }
-      console.error("Sign in error:", error);
-      throw error;
-    } finally {
-      isSigningIn = false;
-      signInPromise = null;
-    }
-  })();
-
-  return signInPromise;
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -94,3 +61,5 @@ export const logout = async () => {
   await auth.signOut();
   cachedAccessToken = null;
 };
+
+export { auth };
