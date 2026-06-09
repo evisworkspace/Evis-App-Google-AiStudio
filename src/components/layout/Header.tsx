@@ -67,10 +67,19 @@ export default function Header() {
   };
 
   const activeProj = getActiveProject();
+  const userName = currentUser?.displayName || currentUser?.email || "Usuário EVIS";
+  const userEmail = currentUser?.email || "email não informado";
+  const initials = userName
+    .split(/\s|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "UE";
 
   const getBreadcrumbs = () => {
     const parts = ["Curitiba Construtora"];
-    
+
     if (currentRoute.startsWith("financeiro-")) {
       parts.push("Financeiro");
       const sub = currentRoute.replace("financeiro-", "");
@@ -84,7 +93,7 @@ export default function Header() {
     } else {
       parts.push(currentRoute.charAt(0).toUpperCase() + currentRoute.slice(1));
     }
-    
+
     return parts;
   };
 
@@ -101,8 +110,8 @@ export default function Header() {
     >
       {/* Overlay to close dropdowns when clicking outside */}
       {(profileOpen || notificationOpen) && (
-        <div 
-          className="fixed inset-0 z-40 transition-opacity" 
+        <div
+          className="fixed inset-0 z-40 transition-opacity"
           onClick={() => {
             setProfileOpen(false);
             setNotificationOpen(false);
@@ -159,11 +168,10 @@ export default function Header() {
         {/* Focus Mode Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-            !sidebarOpen 
-              ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+          className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${!sidebarOpen
+              ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm'
               : 'bg-[hsl(var(--color-secondary))] text-zinc-500 border-[hsl(var(--color-border))] hover:bg-zinc-100 hover:text-zinc-700'
-          }`}
+            }`}
           title="Modo Foco"
         >
           {sidebarOpen ? <Maximize className="h-3.5 w-3.5" /> : <Minimize className="h-3.5 w-3.5" />}
@@ -175,24 +183,22 @@ export default function Header() {
           <button
             onClick={() => setTheme("claro")}
             title="Tema Claro"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${
-              theme === "claro"
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${theme === "claro"
                 ? "bg-white text-blue-600 shadow-sm font-semibold"
                 : "text-zinc-550 hover:text-zinc-900"
-            }`}
+              }`}
           >
             <Sun className="h-3 w-3" />
             <span>Claro</span>
           </button>
-          
+
           <button
             onClick={() => setTheme("escuro")}
             title="Tema Escuro"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${
-              theme === "escuro"
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${theme === "escuro"
                 ? "bg-[hsl(var(--color-card))] text-indigo-400 shadow-sm font-semibold border border-[hsl(var(--color-border))]"
                 : "text-zinc-550 hover:text-zinc-900"
-            }`}
+              }`}
           >
             <Moon className="h-3 w-3" />
             <span>Escuro</span>
@@ -201,11 +207,10 @@ export default function Header() {
           <button
             onClick={() => setTheme("hibrido")}
             title="Tema Híbrido"
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${
-              theme === "hibrido"
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-medium font-sans cursor-pointer transition-all ${theme === "hibrido"
                 ? "bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-500 shadow-sm font-semibold border border-blue-500/20 backdrop-blur-md"
                 : "text-zinc-550 hover:text-zinc-900"
-            }`}
+              }`}
           >
             <Sparkles className="h-3 w-3" />
             <span>Híbrido</span>
@@ -269,57 +274,57 @@ export default function Header() {
 
         {/* User Dropdown or Login */}
         <div className="relative user-dropdown">
-            <button
-              onClick={() => {
-                setProfileOpen(!profileOpen);
-                setNotificationOpen(false);
-              }}
-              className="flex items-center gap-1.5 p-1 hover:bg-zinc-100 rounded-lg transition-all cursor-pointer"
-            >
-              <div className="h-7 w-7 rounded-sm bg-[hsl(var(--color-primary))] text-white font-sans font-bold text-xs flex items-center justify-center border border-primary/20 shrink-0">
-                {currentUser?.displayName ? currentUser.displayName.substring(0, 2).toUpperCase() : "EB"}
+          <button
+            onClick={() => {
+              setProfileOpen(!profileOpen);
+              setNotificationOpen(false);
+            }}
+            className="flex items-center gap-1.5 p-1 hover:bg-zinc-100 rounded-lg transition-all cursor-pointer"
+          >
+            <div className="h-7 w-7 rounded-sm bg-[hsl(var(--color-primary))] text-white font-sans font-bold text-xs flex items-center justify-center border border-primary/20 shrink-0">
+              {initials}
+            </div>
+            <ChevronDown className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
+          </button>
+
+          {profileOpen && (
+            <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200 shadow-2xl py-0.5 z-50 animate-in fade-in slide-in-from-top-3 duration-200 font-sans overflow-hidden">
+              {/* Premium Header Banner */}
+              <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
+                <div className="flex items-center gap-3 relative z-10">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-blue-600 text-white font-sans font-bold text-sm flex items-center justify-center shadow-lg border border-white/20 whitespace-nowrap shrink-0 overflow-hidden">
+                    {currentUser?.photoURL ? <img src={currentUser.photoURL} alt="User" referrerPolicy="no-referrer" /> : initials}
+                  </div>
+                  <div className="truncate">
+                    <p className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
+                      {userName}
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-400 text-zinc-950 font-mono text-[8px] font-black tracking-wider uppercase scale-90">
+                        PRO
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-slate-350 font-mono mt-1 opacity-80 truncate">
+                      {userEmail}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
-            </button>
 
-            {profileOpen && (
-              <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200 shadow-2xl py-0.5 z-50 animate-in fade-in slide-in-from-top-3 duration-200 font-sans overflow-hidden">
-                {/* Premium Header Banner */}
-                <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -mr-8 -mt-8"></div>
-                  <div className="flex items-center gap-3 relative z-10">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-400 to-blue-600 text-white font-sans font-bold text-sm flex items-center justify-center shadow-lg border border-white/20 whitespace-nowrap shrink-0 overflow-hidden">
-                      {currentUser?.photoURL ? <img src={currentUser.photoURL} alt="User" referrerPolicy="no-referrer" /> : "EB"}
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
-                        {currentUser?.displayName || "Engenheiro Berti"}
-                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-400 text-zinc-950 font-mono text-[8px] font-black tracking-wider uppercase scale-90">
-                          PRO
-                        </span>
-                      </p>
-                      <p className="text-[10px] text-slate-350 font-mono mt-1 opacity-80 truncate">
-                        {currentUser?.email || "berti@curitibaconstrutora.com.br"}
-                      </p>
-                    </div>
-                  </div>
+              {/* Status and Active Limits Quota Block */}
+              <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-100 font-sans">
+                <div className="flex items-center justify-between text-[10px] text-slate-505">
+                  <span className="font-medium text-slate-500">Armazenamento Workspace</span>
+                  <span className="font-mono font-semibold text-emerald-600">Conectado</span>
                 </div>
-
-                {/* Status and Active Limits Quota Block */}
-                <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-100 font-sans">
-                  <div className="flex items-center justify-between text-[10px] text-slate-505">
-                    <span className="font-medium text-slate-500">Armazenamento Workspace</span>
-                    <span className="font-mono font-semibold text-emerald-600">Conectado</span>
-                  </div>
-                  <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style={{ width: "100%" }}></div>
-                  </div>
-                  <p className="text-[9px] text-slate-400 font-mono mt-1 leading-normal">
-                    Drive, Calendar, Sheets & Gmail ativos.
-                  </p>
+                <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                  <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style={{ width: "100%" }}></div>
                 </div>
+                <p className="text-[9px] text-slate-400 font-mono mt-1 leading-normal">
+                  Drive, Calendar, Sheets & Gmail ativos.
+                </p>
+              </div>
 
-            {/* Profile Actions List */}
+              {/* Profile Actions List */}
               <div className="p-1 space-y-0.5">
                 <div className="px-3 py-1 text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Minha Conta
@@ -373,33 +378,30 @@ export default function Header() {
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     onClick={() => setTheme("claro")}
-                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${
-                      theme === "claro"
+                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${theme === "claro"
                         ? "bg-white border-blue-500 shadow-sm text-blue-600"
                         : "bg-white/60 border-slate-200/60 text-slate-500 hover:bg-white hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     <Sun className="h-3.5 w-3.5" />
                     <span className="text-[9px] font-semibold">Claro</span>
                   </button>
                   <button
                     onClick={() => setTheme("escuro")}
-                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${
-                      theme === "escuro"
+                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${theme === "escuro"
                         ? "bg-slate-900 border-indigo-500 shadow-sm text-indigo-400"
                         : "bg-white/60 border-slate-200/60 text-slate-500 hover:bg-white hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     <Moon className="h-3.5 w-3.5" />
                     <span className="text-[9px] font-semibold">Escuro</span>
                   </button>
                   <button
                     onClick={() => setTheme("hibrido")}
-                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${
-                      theme === "hibrido"
+                    className={`flex flex-col items-center gap-1 py-1.5 px-1 rounded-lg border text-center transition-all cursor-pointer ${theme === "hibrido"
                         ? "bg-gradient-to-b from-blue-50/50 to-indigo-50/50 border-blue-400 text-blue-600 shadow-sm"
                         : "bg-white/60 border-slate-200/60 text-slate-500 hover:bg-white hover:text-slate-800"
-                    }`}
+                      }`}
                   >
                     <Sparkles className="h-3.5 w-3.5" />
                     <span className="text-[9px] font-bold">Híbrido</span>

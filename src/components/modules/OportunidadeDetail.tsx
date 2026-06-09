@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { Oportunidade } from "../../types";
+import { Obra, Oportunidade } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { 
+import {
   ArrowLeft, Building2, Briefcase, Play, FileText, LayoutDashboard, Calculator, CheckSquare, Layers, Sparkles, User, File, ArrowRight, CheckCircle, Send, Video, Mail, HardHat
 } from "lucide-react";
 import { getAccessToken, googleSignIn } from "../../lib/auth";
 import { createGoogleMeetEvent, createGoogleDriveFolder, sendGmail } from "../../lib/googleApi";
+import { createObra } from "../../services/obraService";
+import { softDeleteOportunidade } from "../../services/oportunidadeService";
 
 interface Props {
   oportunidade: Oportunidade;
@@ -13,9 +15,9 @@ interface Props {
 }
 
 export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
-  const { setOportunidades, setObras, showToast } = useApp();
+  const { setOportunidades, setObras, showToast, companyId, setSelectedProjectId } = useApp();
   const [activeTab, setActiveTab] = useState<"geral" | "orcamento" | "tarefas" | "arquivos" | "propostas">("geral");
-  
+
   // Orçamentista IA Chat States (moved exactly from ObrasView)
   const [isOrcamentistaOpen, setIsOrcamentistaOpen] = useState(false);
   const [orcMsg, setOrcMsg] = useState<Array<{ role: "user" | "assistant"; content: string; itens?: any[] }>>([
@@ -23,7 +25,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
   ]);
   const [orcInput, setOrcInput] = useState("");
   const [isQueryingOrc, setIsQueryingOrc] = useState(false);
-  
+
   // Fake list of orçamentos generated
   const [orcamentosList, setOrcamentosList] = useState<any[]>([]);
 
@@ -34,7 +36,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
     setIsQueryingOrc(true);
 
     try {
-      const res = await fetch("/api/ai/chat", {
+      const res = await fetch("/api/ai/orcamentista", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -50,7 +52,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
           { role: "assistant", content: data.reply || "Análise do Orçamentista concluída.", itens: data.itens || undefined }
         ]);
         if (data.itens && data.itens.length > 0) {
-           setOrcamentosList(prev => [...prev, ...data.itens]);
+          setOrcamentosList(prev => [...prev, ...data.itens]);
         }
       } else {
         throw new Error(data.error || "Erro de resposta");
@@ -98,17 +100,17 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
         showToast("É necessário conectar com o Google para enviar email. Por favor, autentique.", "info");
         const res = await googleSignIn();
         if (res) {
-           token = res.accessToken;
+          token = res.accessToken;
         } else {
-           setIsSendingEmail(false);
-           return;
+          setIsSendingEmail(false);
+          return;
         }
       }
 
       if (!meetClientEmail.trim()) {
-         showToast("O email do cliente é obrigatório.", "error");
-         setIsSendingEmail(false);
-         return;
+        showToast("O email do cliente é obrigatório.", "error");
+        setIsSendingEmail(false);
+        return;
       }
 
       await sendGmail(
@@ -118,7 +120,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
         emailBody
       );
 
-      showToast(`Ambiente simulado: Nenhuma ação real. Email (simulado) para ${meetClientEmail}`, "success");
+      showToast(`Email enviado pelo Gmail para ${meetClientEmail}.`, "success");
       setShowEmailModal(false);
     } catch (e: any) {
       showToast(`Erro ao enviar email: ${e.message}`, "error");
@@ -135,10 +137,10 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
         showToast("É necessário conectar com o Google para agendar. Por favor, autentique.", "info");
         const res = await googleSignIn();
         if (res) {
-           token = res.accessToken;
+          token = res.accessToken;
         } else {
-           setIsSchedulingMeet(false);
-           return;
+          setIsSchedulingMeet(false);
+          return;
         }
       }
 
@@ -159,7 +161,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
       );
 
       const meetLink = data.hangoutLink;
-      showToast(`Ambiente simulado: Nenhuma ação real. Agenda e Convite (Simulado)`, "success");
+      showToast(`Reunião criada no Google Calendar${meetLink ? `: ${meetLink}` : "."}`, "success");
       setShowMeetModal(false);
     } catch (e: any) {
       showToast(`Erro ao agendar reunião: ${e.message}`, "error");
@@ -170,23 +172,28 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
 
   const handleVirarObra = async () => {
     try {
+      if (!companyId) {
+        showToast("Empresa não selecionada para converter oportunidade em obra.", "error");
+        return;
+      }
+
       setIsConverting(true);
       let token = await getAccessToken();
       let driveFolderInfo = "";
       if (token) {
-         try {
-            const folderData = await createGoogleDriveFolder(token, `EVIS Projeto Técnico - ${oportunidade.title}`);
-            driveFolderInfo = `Pasta GDrive vinculada.\nID: ${folderData.id}`;
-            showToast(`Ambiente simulado: Nenhuma ação real. Pasta simulada.`, "success");
-         } catch(e: any) {
-            console.error(e);
-            showToast(`Atenção: Não criou pasta Drive. ${e.message}`, "info");
-         }
+        try {
+          const folderData = await createGoogleDriveFolder(token, `EVIS Projeto Técnico - ${oportunidade.title}`);
+          driveFolderInfo = `Pasta GDrive vinculada.\nID: ${folderData.id}`;
+          showToast(`Pasta criada no Google Drive para ${oportunidade.title}.`, "success");
+        } catch (e: any) {
+          console.error(e);
+          showToast(`Atenção: Não criou pasta Drive. ${e.message}`, "info");
+        }
       }
 
       // move from oportunidades to obras
-      const novaObra = {
-        id: `obra_${Date.now()}`,
+      const novaObra: Omit<Obra, "id" | "obraId"> = {
+        oportunidadeId: oportunidade.id,
         name: oportunidade.title,
         location: "Curitiba/PR", // mock
         description: `Obra gerada a partir da oportunidade: ${oportunidade.title}\n${driveFolderInfo}`,
@@ -203,11 +210,17 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
         medicoesList: [],
         orcamentoInsumos: []
       };
-      
-      setObras(prev => [...prev, novaObra]);
+
+      const obraCriada = await createObra(companyId, novaObra);
+      await softDeleteOportunidade(companyId, oportunidade.id);
+
+      setObras(prev => [...prev, obraCriada]);
       setOportunidades(prev => prev.filter(o => o.id !== oportunidade.id));
-      showToast(`Ambiente simulado: "${oportunidade.title}" virou obra no sistema.`, "success");
+      setSelectedProjectId(obraCriada.id);
+      showToast(`"${oportunidade.title}" virou obra no Firestore.`, "success");
       onBack();
+    } catch (error: any) {
+      showToast(`Erro ao converter oportunidade em obra: ${error.message}`, "error");
     } finally {
       setIsConverting(false);
     }
@@ -231,36 +244,36 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               <span className="text-[10px] font-mono font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase tracking-wider">{oportunidade.stage}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1 font-mono uppercase tracking-widest">
-              <Building2 className="h-3 w-3" /> {oportunidade.client} • Curitiba/PR 
+              <Building2 className="h-3 w-3" /> {oportunidade.client} • Curitiba/PR
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3 text-sm">
           <div className="flex flex-col text-right mr-4">
             <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-widest">Valor Estimado</span>
             <span className="font-bold text-lg text-zinc-900">R$ {(oportunidade.value / 1000000).toFixed(2)}M</span>
           </div>
-          <button 
+          <button
             className="px-4 py-2 border border-blue-500 text-blue-600 font-bold rounded-lg hover:bg-blue-50 bg-white shadow-sm flex items-center gap-2 transition-all cursor-pointer text-sm disabled:opacity-50"
             onClick={handleCreateMeetClick}
             disabled={isSchedulingMeet}
           >
             <Video className="h-4 w-4" /> {isSchedulingMeet ? "Agendando..." : "Google Meet"}
           </button>
-          <button 
+          <button
             className="px-4 py-2 border border-blue-500 text-blue-600 font-bold rounded-lg hover:bg-blue-50 bg-white shadow-sm flex items-center gap-2 transition-all cursor-pointer text-sm disabled:opacity-50"
             onClick={handleSendEmailClick}
             disabled={isSendingEmail}
           >
             <Mail className="h-4 w-4" /> {isSendingEmail ? "Enviando..." : "Gmail Enviar"}
           </button>
-          <button 
+          <button
             className="px-4 py-2 border border-emerald-500 text-emerald-600 font-bold rounded-lg hover:bg-emerald-50 bg-white shadow-sm flex items-center gap-2 transition-all cursor-pointer text-sm disabled:opacity-50"
             onClick={handleVirarObra}
             disabled={isConverting}
           >
-            <HardHat className="h-4 w-4" /> {isConverting ? "Criando Drive..." : "Virar Obra"}
+            <HardHat className="h-4 w-4" /> {isConverting ? "Convertendo..." : "Virar Obra"}
           </button>
         </div>
       </div>
@@ -277,11 +290,10 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-6 py-3.5 border-b-2 text-[11px] font-bold font-mono tracking-widest uppercase transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === tab.id
+            className={`flex items-center gap-2 px-6 py-3.5 border-b-2 text-[11px] font-bold font-mono tracking-widest uppercase transition-colors whitespace-nowrap cursor-pointer ${activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-zinc-400 hover:text-zinc-700 hover:border-zinc-300"
-            }`}
+              }`}
           >
             <tab.icon className={`h-4 w-4 ${activeTab === tab.id ? "text-primary" : "text-zinc-400"}`} />
             {tab.label}
@@ -295,25 +307,25 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
           {/* Lia Comercial Suggestion Card */}
           <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/40 rounded-lg p-5 shadow-sm">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-purple-800 dark:text-purple-400 mb-2 flex items-center gap-2">
-               <Sparkles className="h-4 w-4" /> Lia Comercial (Assistente CRM)
+              <Sparkles className="h-4 w-4" /> Lia Comercial (Assistente CRM)
             </h3>
             <p className="text-sm font-semibold text-purple-950 dark:text-purple-100">
-               Este lead parece quente porque demonstrou urgência e pediu retorno rápido. Posso preparar um briefing para orçamento, mas você confirma antes.
+              Este lead parece quente porque demonstrou urgência e pediu retorno rápido. Posso preparar um briefing para orçamento, mas você confirma antes.
             </p>
             <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-               Temperatura do Lead: {oportunidade.probability < 50 ? "Baixa (Risco de Perda)" : oportunidade.probability < 80 ? "Moderada" : "Alta (Quente)"}. Sugiro contato em até 24 horas.
+              Temperatura do Lead: {oportunidade.probability < 50 ? "Baixa (Risco de Perda)" : oportunidade.probability < 80 ? "Moderada" : "Alta (Quente)"}. Sugiro contato em até 24 horas.
             </p>
             <div className="mt-4 flex gap-3">
-               <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all cursor-pointer shadow-sm"
-                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-               >
-                 Preparar briefing para orçamento
-               </button>
-               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 transition-all cursor-pointer shadow-sm"
-                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-               >
-                 Ver contexto de risco da conta
-               </button>
+              <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all cursor-pointer shadow-sm"
+                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+              >
+                Preparar briefing para orçamento
+              </button>
+              <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 transition-all cursor-pointer shadow-sm"
+                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+              >
+                Ver contexto de risco da conta
+              </button>
             </div>
           </div>
 
@@ -338,7 +350,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 mb-4">Cliente / Incorporador</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -357,129 +369,129 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
 
       {activeTab === "orcamento" && (
         <div className="space-y-6">
-           {/* Otto Orçamentista Insights */}
-           <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-lg border border-emerald-200 dark:border-emerald-900/40 mb-2 relative shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                 <Sparkles className="h-4 w-4 text-emerald-600" />
-                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
-                    Otto Orçamentista (Assistente de Custos)
-                 </h3>
-              </div>
-              <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100 mb-3 leading-relaxed">
-                 Há lacunas no escopo que podem afetar o preço final (ex: falta prever infraestrutura de refrigeração para todas as salas). <br/>
-                 Este item tem baixa confiança e precisa de revisão humana: <strong>Fundação profunda — Cotação parametrizada (margem de erro de 20%)</strong>. <br/>
-                 Orçamento final exige aprovação do responsável.
-              </p>
-              <div className="flex gap-3">
-                 <button onClick={() => setIsOrcamentistaOpen(!isOrcamentistaOpen)} className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
-                   Ativar Simulador de Custos
-                 </button>
-                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
-                   Enviar perguntas pendentes ao cliente
-                 </button>
-              </div>
-           </div>
+          {/* Otto Orçamentista Insights */}
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-lg border border-emerald-200 dark:border-emerald-900/40 mb-2 relative shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-emerald-600" />
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+                Otto Orçamentista (Assistente de Custos)
+              </h3>
+            </div>
+            <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100 mb-3 leading-relaxed">
+              Há lacunas no escopo que podem afetar o preço final (ex: falta prever infraestrutura de refrigeração para todas as salas). <br />
+              Este item tem baixa confiança e precisa de revisão humana: <strong>Fundação profunda — Cotação parametrizada (margem de erro de 20%)</strong>. <br />
+              Orçamento final exige aprovação do responsável.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setIsOrcamentistaOpen(!isOrcamentistaOpen)} className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                Ativar Simulador de Custos
+              </button>
+              <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                Enviar perguntas pendentes ao cliente
+              </button>
+            </div>
+          </div>
 
           <div className="bg-white border border-[hsl(var(--color-border))] rounded-lg p-5">
-             <div className="flex items-center justify-between border-b border-zinc-100 pb-3 flex-wrap gap-4">
-                <div>
-                  <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 flex items-center gap-2">
-                     <Sparkles className="h-4 w-4 text-purple-500" /> Assistência de IA
-                  </h3>
-                  <p className="text-[11px] text-purple-700 font-sans mt-0.5">
-                    Importe um orçamento existente ou crie um novo com o Agente Orçamentista.
-                  </p>
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 flex-wrap gap-4">
+              <div>
+                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-500" /> Assistência de IA
+                </h3>
+                <p className="text-[11px] text-purple-700 font-sans mt-0.5">
+                  Importe um orçamento existente ou crie um novo com o Agente Orçamentista.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsOrcamentistaOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-mono text-[10px] font-bold rounded cursor-pointer shadow-sm"
+              >
+                <Sparkles className="h-3 w-3" /> Orçar com IA
+              </button>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
+              <div className="flex gap-4">
+                <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-sans">
+                  <span>BDI Produto:</span>
+                  <input type="text" className="w-12 h-6 border border-zinc-200 rounded text-center" defaultValue="10" /> %
                 </div>
-                <button
-                  onClick={() => setIsOrcamentistaOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-mono text-[10px] font-bold rounded cursor-pointer shadow-sm"
-                >
-                  <Sparkles className="h-3 w-3" /> Orçar com IA
+                <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-sans">
+                  <span>BDI M.O.:</span>
+                  <input type="text" className="w-12 h-6 border border-zinc-200 rounded text-center" defaultValue="25" /> %
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <input type="text" className="bg-white border border-zinc-200 rounded px-2 h-7 text-xs w-64" placeholder="Buscar item..." />
+                <button className="bg-zinc-800 text-white h-7 px-3 rounded text-[10px] font-mono font-bold hover:bg-zinc-700 cursor-pointer">
+                  + Adicionar grupo
                 </button>
               </div>
+            </div>
 
-              <div className="mt-4 flex items-center justify-between bg-zinc-50 p-2.5 rounded-lg border border-zinc-200">
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-sans">
-                    <span>BDI Produto:</span>
-                    <input type="text" className="w-12 h-6 border border-zinc-200 rounded text-center" defaultValue="10" /> %
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-600 font-sans">
-                    <span>BDI M.O.:</span>
-                    <input type="text" className="w-12 h-6 border border-zinc-200 rounded text-center" defaultValue="25" /> %
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" className="bg-white border border-zinc-200 rounded px-2 h-7 text-xs w-64" placeholder="Buscar item..." />
-                  <button className="bg-zinc-800 text-white h-7 px-3 rounded text-[10px] font-mono font-bold hover:bg-zinc-700 cursor-pointer">
-                    + Adicionar grupo
-                  </button>
-                </div>
-              </div>
+            <div className="mt-4 border border-zinc-200 rounded-lg overflow-hidden">
+              <table className="w-full text-left font-sans whitespace-nowrap">
+                <thead>
+                  <tr className="bg-zinc-50 border-b border-zinc-200 text-[10px] text-zinc-500 font-mono tracking-widest uppercase">
+                    <th className="px-4 py-2 font-bold w-12">Nº</th>
+                    <th className="px-4 py-2 font-bold">Item</th>
+                    <th className="px-4 py-2 font-bold">Categoria</th>
+                    <th className="px-4 py-2 font-bold text-center">Un.</th>
+                    <th className="px-4 py-2 font-bold text-right">Qtd.</th>
+                    <th className="px-4 py-2 font-bold text-right">Custo un.</th>
+                    <th className="px-4 py-2 font-bold text-right">Preço un.</th>
+                    <th className="px-4 py-2 font-bold text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orcamentosList.length === 0 ? (
+                    <tr className="bg-white hover:bg-zinc-50/50">
+                      <td className="px-4 py-2.5 text-xs text-zinc-600 font-medium">1</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-700 font-bold">Resumo / Novo grupo</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-400">—</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-400 text-center">—</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-400 text-right">—</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-800 text-right">R$ 0</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-400 text-right">—</td>
+                      <td className="px-4 py-2.5 text-xs text-zinc-800 text-right font-bold">R$ 0</td>
+                    </tr>
+                  ) : (
+                    orcamentosList.map((item, idx) => (
+                      <tr key={idx} className="border-b border-zinc-100 bg-white hover:bg-zinc-50/50">
+                        <td className="px-4 py-2.5 text-xs text-zinc-600 font-medium">{idx + 1}</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-700 font-bold truncate max-w-[200px]">{item.category}</td>
+                        <td className="px-4 py-2.5 text-[10px] text-blue-600 font-mono font-bold uppercase">{item.category}</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-500 text-center">VB</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-700 text-right">1</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-800 text-right">R$ 0</td>
+                        <td className="px-4 py-2.5 text-[10px] text-zinc-400 font-mono text-right">N/A</td>
+                        <td className="px-4 py-2.5 text-xs text-zinc-800 text-right font-bold">R$ {item.planned?.toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
 
-              <div className="mt-4 border border-zinc-200 rounded-lg overflow-hidden">
-                <table className="w-full text-left font-sans whitespace-nowrap">
-                  <thead>
-                    <tr className="bg-zinc-50 border-b border-zinc-200 text-[10px] text-zinc-500 font-mono tracking-widest uppercase">
-                      <th className="px-4 py-2 font-bold w-12">Nº</th>
-                      <th className="px-4 py-2 font-bold">Item</th>
-                      <th className="px-4 py-2 font-bold">Categoria</th>
-                      <th className="px-4 py-2 font-bold text-center">Un.</th>
-                      <th className="px-4 py-2 font-bold text-right">Qtd.</th>
-                      <th className="px-4 py-2 font-bold text-right">Custo un.</th>
-                      <th className="px-4 py-2 font-bold text-right">Preço un.</th>
-                      <th className="px-4 py-2 font-bold text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orcamentosList.length === 0 ? (
-                       <tr className="bg-white hover:bg-zinc-50/50">
-                         <td className="px-4 py-2.5 text-xs text-zinc-600 font-medium">1</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-700 font-bold">Resumo / Novo grupo</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-400">—</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-400 text-center">—</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-400 text-right">—</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-800 text-right">R$ 0</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-400 text-right">—</td>
-                         <td className="px-4 py-2.5 text-xs text-zinc-800 text-right font-bold">R$ 0</td>
-                       </tr>
-                    ) : (
-                      orcamentosList.map((item, idx) => (
-                        <tr key={idx} className="border-b border-zinc-100 bg-white hover:bg-zinc-50/50">
-                          <td className="px-4 py-2.5 text-xs text-zinc-600 font-medium">{idx + 1}</td>
-                          <td className="px-4 py-2.5 text-xs text-zinc-700 font-bold truncate max-w-[200px]">{item.category}</td>
-                          <td className="px-4 py-2.5 text-[10px] text-blue-600 font-mono font-bold uppercase">{item.category}</td>
-                          <td className="px-4 py-2.5 text-xs text-zinc-500 text-center">VB</td>
-                          <td className="px-4 py-2.5 text-xs text-zinc-700 text-right">1</td>
-                          <td className="px-4 py-2.5 text-xs text-zinc-800 text-right">R$ 0</td>
-                          <td className="px-4 py-2.5 text-[10px] text-zinc-400 font-mono text-right">N/A</td>
-                          <td className="px-4 py-2.5 text-xs text-zinc-800 text-right font-bold">R$ {item.planned?.toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                    
-                    {/* Footers */}
-                    <tr className="bg-zinc-50 border-t border-zinc-200 font-semibold font-mono text-xs">
-                      <td colSpan={7} className="px-4 py-3 text-right">Total Geral</td>
-                      <td className="px-4 py-3 text-right font-black text-primary">
-                        R$ {orcamentosList.reduce((acc, curr) => acc + (curr.planned || 0), 0).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                  {/* Footers */}
+                  <tr className="bg-zinc-50 border-t border-zinc-200 font-semibold font-mono text-xs">
+                    <td colSpan={7} className="px-4 py-3 text-right">Total Geral</td>
+                    <td className="px-4 py-3 text-right font-black text-primary">
+                      R$ {orcamentosList.reduce((acc, curr) => acc + (curr.planned || 0), 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* AI Estimator Modal slide-over */}
       {/* Overlay to close when clicking outside */}
-      <div 
+      <div
         className={`fixed inset-0 z-40 bg-zinc-950/20 backdrop-blur-xs transition-opacity duration-300 ${isOrcamentistaOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
         onClick={() => setIsOrcamentistaOpen(false)}
       />
-      
-      <div 
+
+      <div
         className={`fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] bg-white border-l border-zinc-200 flex flex-col shadow-2xl transition-transform duration-300 transform ${isOrcamentistaOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex items-center justify-between p-4 border-b border-zinc-100 shrink-0 bg-zinc-50/50">
@@ -492,7 +504,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-500">Agente de Pré-Obra</span>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setIsOrcamentistaOpen(false)}
             className="p-1.5 hover:bg-zinc-200 rounded-md text-zinc-500 cursor-pointer transition-colors"
           >
@@ -504,11 +516,10 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
           {orcMsg.map((m, idx) => (
             <div
               key={idx}
-              className={`p-3 rounded-xl border leading-relaxed font-sans ${
-                m.role === "user"
+              className={`p-3 rounded-xl border leading-relaxed font-sans ${m.role === "user"
                   ? "bg-zinc-900 text-white border-zinc-950 ml-8"
                   : "bg-zinc-50 text-zinc-800 border-zinc-200 mr-4"
-              }`}
+                }`}
             >
               <p className="font-semibold text-[9.5px] font-mono opacity-60 tracking-wider mb-1">
                 {m.role === "user" ? "Berti (Você)" : "Otto Orçamentista"}
@@ -516,7 +527,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               <p className="whitespace-pre-line text-sm font-medium leading-relaxed">
                 {m.content}
               </p>
-              
+
               {m.itens && m.itens.length > 0 && (
                 <div className="mt-4 bg-white border border-zinc-200 rounded-lg overflow-hidden shadow-xs">
                   <div className="bg-emerald-50 text-emerald-800 text-[10px] font-mono font-bold uppercase p-2 px-3 border-b border-emerald-100 flex justify-between items-center">

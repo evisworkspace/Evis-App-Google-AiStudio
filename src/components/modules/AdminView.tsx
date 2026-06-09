@@ -1,5 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
+import {
+  Cliente,
+  createCliente,
+  getClientes,
+  softDeleteCliente,
+} from "../../services/clienteService";
 import {
   Sparkles,
   Sliders,
@@ -16,7 +22,7 @@ import {
 } from "lucide-react";
 
 export default function AdminView() {
-  const { currentRoute, setCurrentRoute } = useApp();
+  const { currentRoute, setCurrentRoute, companyId, showToast } = useApp();
 
   const [companyName, setCompanyName] = useState("Curitiba Construtora S/A");
   const [cnpj, setCnpj] = useState("12.345.678/0001-90");
@@ -28,10 +34,73 @@ export default function AdminView() {
     { name: "Curitiba Blocos & Lajes Ltda", cnpj: "20.302.404/0001-85", type: "Artefatos Cimento", rating: "B+" },
   ]);
 
-  const [clientes, setClientes] = useState([
-    { name: "Ambev Incorporações S.A.", cnpj: "10.222.111/0001-50", type: "Industrial", contracts: 2 },
-    { name: "Residencial Belle Vue Empr.", cnpj: "33.555.222/0001-90", type: "Residencial", contracts: 1 },
-  ]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [loadingClientes, setLoadingClientes] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (currentRoute !== "cadastros-clientes" || !companyId) return;
+
+    const loadClientes = async () => {
+      setLoadingClientes(true);
+      try {
+        const loadedClientes = await getClientes(companyId);
+        if (!cancelled) setClientes(loadedClientes);
+      } catch (error) {
+        console.error("Erro ao carregar clientes:", error);
+        if (!cancelled) showToast("Erro ao carregar clientes do Firestore.", "error");
+      } finally {
+        if (!cancelled) setLoadingClientes(false);
+      }
+    };
+
+    loadClientes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRoute, companyId, showToast]);
+
+  const handleAddCliente = async () => {
+    if (!companyId) {
+      showToast("Empresa não selecionada para cadastrar cliente.", "error");
+      return;
+    }
+
+    const name = prompt("Nome do cliente / incorporador:")?.trim();
+    if (!name) return;
+
+    const cnpjCliente = prompt("CNPJ do cliente:")?.trim() || "Não informado";
+    const type = prompt("Segmento do cliente:")?.trim() || "Contratante";
+
+    try {
+      const created = await createCliente(companyId, {
+        name,
+        cnpj: cnpjCliente,
+        type,
+        contracts: 0,
+      });
+      setClientes((prev) => [created, ...prev]);
+      showToast("Cliente cadastrado no Firestore.", "success");
+    } catch (error) {
+      console.error("Erro ao cadastrar cliente:", error);
+      showToast("Erro ao cadastrar cliente no Firestore.", "error");
+    }
+  };
+
+  const handleSoftDeleteCliente = async (cliente: Cliente) => {
+    if (!companyId) return;
+
+    try {
+      await softDeleteCliente(companyId, cliente.id);
+      setClientes((prev) => prev.filter((item) => item.id !== cliente.id));
+      showToast(`Cliente "${cliente.name}" arquivado.`, "info");
+    } catch (error) {
+      console.error("Erro ao arquivar cliente:", error);
+      showToast("Erro ao arquivar cliente no Firestore.", "error");
+    }
+  };
 
   return (
     <div className="space-y-6 font-sans text-xs">
@@ -82,22 +151,32 @@ export default function AdminView() {
                 Relação de contratantes finais de medições físicas.
               </p>
             </div>
-            <button className="py-1 px-2.5 bg-[hsl(var(--color-primary))] text-white font-mono text-[9.5px] font-bold rounded hover:bg-blue-600 cursor-pointer uppercase">
+            <button onClick={handleAddCliente} className="py-1 px-2.5 bg-[hsl(var(--color-primary))] text-white font-mono text-[9.5px] font-bold rounded hover:bg-blue-600 cursor-pointer uppercase">
               + Adicionar Cliente SPE
             </button>
           </div>
 
           <div className="space-y-3">
-            {clientes.map((c, idx) => (
-              <div key={idx} className="p-3 bg-zinc-50 border border-zinc-150 rounded-md flex justify-between items-center text-xs">
+            {loadingClientes ? (
+              <p className="text-xs text-zinc-400 py-6 text-center">Carregando clientes...</p>
+            ) : clientes.length === 0 ? (
+              <p className="text-xs text-zinc-400 py-6 text-center">Nenhum cliente cadastrado para esta empresa.</p>
+            ) : clientes.map((c) => (
+              <div key={c.id} className="p-3 bg-zinc-50 border border-zinc-150 rounded-md flex justify-between items-center text-xs">
                 <div>
                   <h4 className="font-bold text-zinc-800">{c.name}</h4>
                   <p className="text-[10px] font-mono text-zinc-400 mt-1">CNPJ: {c.cnpj} • Segmento: {c.type}</p>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-sans text-zinc-500 block">
-                     {c.contracts} contratos ativos
+                    {c.contracts ?? 0} contratos ativos
                   </span>
+                  <button
+                    onClick={() => handleSoftDeleteCliente(c)}
+                    className="text-[9px] text-rose-500 hover:text-rose-700 font-mono uppercase mt-1 cursor-pointer"
+                  >
+                    Arquivar
+                  </button>
                 </div>
               </div>
             ))}

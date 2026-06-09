@@ -5,6 +5,8 @@
 
 export interface Obra {
   id: string;
+  obraId?: string;
+  oportunidadeId?: string;
   name: string;
   location: string;
   description: string;
@@ -20,6 +22,9 @@ export interface Obra {
   rdoList: { id: string; date: string; weather: string; workers: number; progressNote: string; observations: string }[];
   medicoesList: { id: string; date: string; amount: number; description: string; status: "Aprovado" | "Pendente" | "Revisando" }[];
   orcamentoInsumos: { category: string; planned: number; actual: number; margin: number }[];
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
 }
 
 export interface Oportunidade {
@@ -32,6 +37,9 @@ export interface Oportunidade {
   date: string;
   owner: string;
   probability: number; // %
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
 }
 
 export interface LancamentoFinanceiro {

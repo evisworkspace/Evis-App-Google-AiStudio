@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Oportunidade } from "../../types";
+import { softDeleteOportunidade, updateOportunidade } from "../../services/oportunidadeService";
 import { motion, AnimatePresence } from "motion/react";
 import OportunidadeDetail from "./OportunidadeDetail";
 import {
@@ -28,7 +29,7 @@ import {
 } from "lucide-react";
 
 export default function OportunidadesView() {
-  const { oportunidades, setOportunidades, addOportunidade, showToast } = useApp();
+  const { oportunidades, setOportunidades, addOportunidade, showToast, companyId } = useApp();
   const [filterText, setFilterText] = useState("");
   const [viewMode, setViewMode] = useState<"lista" | "quadro">("quadro");
   const [isAdding, setIsAdding] = useState(false);
@@ -50,7 +51,7 @@ export default function OportunidadesView() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedLead, setExtractedLead] = useState<any | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const valFloat = parseFloat(value);
     if (!title.trim() || !client.trim() || isNaN(valFloat)) {
@@ -58,17 +59,12 @@ export default function OportunidadesView() {
       return;
     }
 
-    // Call standard CRM insert helper
-    addOportunidade(title, client, valFloat, stage);
-
-    // Let's modify the last added opportunity probability if they used the custom modal slider
-    setOportunidades((prev) => {
-      const updated = [...prev];
-      if (updated.length > 0 && updated[0].title === title) {
-        updated[0].probability = customProbability;
-      }
-      return updated;
-    });
+    try {
+      await addOportunidade(title, client, valFloat, stage, customProbability);
+    } catch (error: any) {
+      showToast(error.message || "Erro ao salvar oportunidade no Firestore.", "error");
+      return;
+    }
 
     setTitle("");
     setClient("");
@@ -87,11 +83,29 @@ export default function OportunidadesView() {
         return o;
       })
     );
+
+    if (companyId) {
+      updateOportunidade(companyId, id, { probability: prob }).catch((error) => {
+        console.error("Erro ao atualizar probabilidade:", error);
+        showToast("Erro ao salvar probabilidade no Firestore.", "error");
+      });
+    }
   };
 
-  const deleteOp = (id: string, title: string) => {
-    setOportunidades((prev) => prev.filter((o) => o.id !== id));
-    showToast(`Proposta "${title}" removida do funil ERP.`, "info");
+  const deleteOp = async (id: string, title: string) => {
+    if (!companyId) {
+      showToast("Empresa não selecionada para arquivar oportunidade.", "error");
+      return;
+    }
+
+    try {
+      await softDeleteOportunidade(companyId, id);
+      setOportunidades((prev) => prev.filter((o) => o.id !== id));
+      showToast(`Proposta "${title}" arquivada do funil ERP.`, "info");
+    } catch (error) {
+      console.error("Erro ao arquivar oportunidade:", error);
+      showToast("Erro ao arquivar oportunidade no Firestore.", "error");
+    }
   };
 
   // Group columns
@@ -107,30 +121,42 @@ export default function OportunidadesView() {
   };
 
   const moveStage = (id: string, direction: "forward" | "back") => {
-    setOportunidades((prev) =>
-      prev.map((o) => {
-        if (o.id === id) {
-          const currentIdx = stages.indexOf(o.stage);
-          let nextIdx = currentIdx;
-          if (direction === "forward" && currentIdx < stages.length - 1) {
-            nextIdx = currentIdx + 1;
-          } else if (direction === "back" && currentIdx > 0) {
-            nextIdx = currentIdx - 1;
-          }
+    const oportunidadeAtual = oportunidades.find((o) => o.id === id);
+    if (!oportunidadeAtual) return;
 
-          if (nextIdx !== currentIdx) {
-            const nextStage = stages[nextIdx];
-            showToast(`"${o.title}" movido para o estágio de "${nextStage}"`, "success");
-            return {
-              ...o,
-              stage: nextStage,
-              probability: nextStage === "Ganho" ? 100 : nextStage === "Perdido" ? 0 : o.probability,
-            };
+    const currentIdx = stages.indexOf(oportunidadeAtual.stage);
+    let nextIdx = currentIdx;
+    if (direction === "forward" && currentIdx < stages.length - 1) {
+      nextIdx = currentIdx + 1;
+    } else if (direction === "back" && currentIdx > 0) {
+      nextIdx = currentIdx - 1;
+    }
+
+    if (nextIdx === currentIdx) return;
+
+    const nextStage = stages[nextIdx];
+    const probability = nextStage === "Ganho" ? 100 : nextStage === "Perdido" ? 0 : oportunidadeAtual.probability;
+
+    setOportunidades((prev) =>
+      prev.map((o) =>
+        o.id === id
+          ? {
+            ...o,
+            stage: nextStage,
+            probability,
           }
-        }
-        return o;
-      })
+          : o
+      )
     );
+
+    if (companyId) {
+      updateOportunidade(companyId, id, { stage: nextStage, probability }).catch((error) => {
+        console.error("Erro ao atualizar estágio:", error);
+        showToast("Erro ao salvar estágio no Firestore.", "error");
+      });
+    }
+
+    showToast(`"${oportunidadeAtual.title}" movido para o estágio de "${nextStage}"`, "success");
   };
 
   // Calculations for CRM overview KPI panel
@@ -275,19 +301,17 @@ export default function OportunidadesView() {
         <div className="flex flex-wrap items-center gap-3 self-end sm:self-auto w-full sm:w-auto">
           {/* Toggle buttons */}
           <div className="flex bg-zinc-50 border border-zinc-200 rounded-md p-0.5">
-            <button 
+            <button
               onClick={() => setViewMode("quadro")}
-              className={`px-2 py-1 text-[10px] uppercase font-bold rounded transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === "quadro" ? "bg-white text-[hsl(var(--color-primary))] shadow-xs" : "text-zinc-500 hover:bg-white hover:shadow-xs"
-              }`}
+              className={`px-2 py-1 text-[10px] uppercase font-bold rounded transition-all flex items-center gap-1.5 cursor-pointer ${viewMode === "quadro" ? "bg-white text-[hsl(var(--color-primary))] shadow-xs" : "text-zinc-500 hover:bg-white hover:shadow-xs"
+                }`}
             >
               <LayoutGrid className="h-3.5 w-3.5" /> Quadro
             </button>
-            <button 
+            <button
               onClick={() => setViewMode("lista")}
-              className={`px-2 py-1 text-[10px] uppercase font-bold rounded flex items-center gap-1.5 transition-all cursor-pointer ${
-                viewMode === "lista" ? "bg-white text-[hsl(var(--color-primary))] shadow-xs" : "text-zinc-500 hover:bg-white hover:shadow-xs"
-              }`}
+              className={`px-2 py-1 text-[10px] uppercase font-bold rounded flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === "lista" ? "bg-white text-[hsl(var(--color-primary))] shadow-xs" : "text-zinc-500 hover:bg-white hover:shadow-xs"
+                }`}
             >
               <List className="h-3.5 w-3.5" /> Lista
             </button>
@@ -334,29 +358,29 @@ export default function OportunidadesView() {
 
       {/* Lia Comercial Insights Layer */}
       <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-900/40 rounded-xl p-5 mb-6 shadow-sm">
-         <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-purple-800 dark:text-purple-400 mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4" /> Lia Comercial (Analista de CRM)
-         </h3>
-         <p className="text-sm font-semibold text-purple-950 dark:text-purple-100 mb-3">
-            Este lead <span className="font-bold underline decoration-purple-300">Residencial Kairo</span> parece quente porque demonstrou urgência e pediu retorno rápido. <span className="text-orange-600 block mt-1">Sugiro contato em até 24 horas. Posso preparar um briefing para orçamento, mas você confirma antes.</span>
-         </p>
-         <div className="flex gap-3">
-            <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer shadow-sm transition-all"
-               onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-            >
-              Preparar briefing para orçamento
-            </button>
-            <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 cursor-pointer shadow-sm transition-all"
-               onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-            >
-              Gerar rascunho de engajamento (Gmail)
-            </button>
-         </div>
+        <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-purple-800 dark:text-purple-400 mb-2 flex items-center gap-2">
+          <Sparkles className="h-4 w-4" /> Lia Comercial (Analista de CRM)
+        </h3>
+        <p className="text-sm font-semibold text-purple-950 dark:text-purple-100 mb-3">
+          Este lead <span className="font-bold underline decoration-purple-300">Residencial Kairo</span> parece quente porque demonstrou urgência e pediu retorno rápido. <span className="text-orange-600 block mt-1">Sugiro contato em até 24 horas. Posso preparar um briefing para orçamento, mas você confirma antes.</span>
+        </p>
+        <div className="flex gap-3">
+          <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer shadow-sm transition-all"
+            onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+          >
+            Preparar briefing para orçamento
+          </button>
+          <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 cursor-pointer shadow-sm transition-all"
+            onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+          >
+            Gerar rascunho de engajamento (Gmail)
+          </button>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
         {viewMode === "lista" ? (
-          <motion.div 
+          <motion.div
             key="lista"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -384,8 +408,8 @@ export default function OportunidadesView() {
                   stages.flatMap(stg => getFilteredOps(stg)).map((op, idx) => {
                     const { border } = getGlowAndAccent(op.stage);
                     return (
-                      <tr 
-                        key={op.id} 
+                      <tr
+                        key={op.id}
                         onClick={() => setSelectedOportunidadeId(op.id)}
                         className="hover:bg-zinc-50/50 cursor-pointer transition-colors group"
                       >
@@ -420,7 +444,7 @@ export default function OportunidadesView() {
             </table>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="quadro"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -429,206 +453,206 @@ export default function OportunidadesView() {
             className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-zinc-200"
           >
             {stages.map((stg) => {
-            const opsInStg = getFilteredOps(stg);
-            const colSum = opsInStg.reduce((acc, current) => acc + current.value, 0);
-  
-            return (
-              <div
-                key={stg}
-                className="bg-zinc-100/60 border border-zinc-200 p-3.5 rounded-2xl shrink-0 min-w-[270px] flex flex-col justify-between shadow-xs max-w-[310px] flex-1"
-              >
-                {/* Column header */}
-                <div>
-                  <div className="flex items-center justify-between border-b border-zinc-200 pb-2.5 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-extrabold text-zinc-700 uppercase tracking-wider">
-                        {stg}
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.25 bg-zinc-200 text-zinc-650 rounded-full font-bold font-mono">
-                        {opsInStg.length}
+              const opsInStg = getFilteredOps(stg);
+              const colSum = opsInStg.reduce((acc, current) => acc + current.value, 0);
+
+              return (
+                <div
+                  key={stg}
+                  className="bg-zinc-100/60 border border-zinc-200 p-3.5 rounded-2xl shrink-0 min-w-[270px] flex flex-col justify-between shadow-xs max-w-[310px] flex-1"
+                >
+                  {/* Column header */}
+                  <div>
+                    <div className="flex items-center justify-between border-b border-zinc-200 pb-2.5 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-extrabold text-zinc-700 uppercase tracking-wider">
+                          {stg}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.25 bg-zinc-200 text-zinc-650 rounded-full font-bold font-mono">
+                          {opsInStg.length}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono font-black text-primary">
+                        R$ {(colSum / 1000).toFixed(0)}k
                       </span>
                     </div>
-                    <span className="text-xs font-mono font-black text-primary">
-                      R$ {(colSum / 1000).toFixed(0)}k
-                    </span>
-                  </div>
-  
-                  {/* Column cards bucket */}
-                  <div className="space-y-3">
-                    {opsInStg.length === 0 ? (
-                      /* Elegant Empty State inside individual columns */
-                      <div className="flex flex-col items-center justify-center py-10 px-3 border border-dashed border-zinc-300 rounded-xl bg-white/40 text-center animate-fade-in my-1.5">
-                        <FolderOpen
-                          className="h-7.5 w-7.5 text-zinc-300 mb-2.5 animate-bounce"
-                          style={{ animationDuration: "3.5s" }}
-                        />
-                        <p className="text-[10px] font-bold text-zinc-500 leading-snug">Vazio nesta Etapa</p>
-                        <p className="text-[9px] text-zinc-400 mt-1 leading-snug max-w-[140px] mx-auto">
-                          Nenhuma proposta na triagem comercial de {stg.toLowerCase()}.
-                        </p>
-                        <button
-                          onClick={() => {
-                            setStage(stg);
-                            setIsAdding(true);
-                          }}
-                          className="mt-3 py-1 px-2 border border-zinc-200 bg-white hover:bg-zinc-50 text-[9px] font-mono font-bold text-zinc-600 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                        >
-                          <Plus className="h-3 w-3 text-primary" /> Criar Proposta
-                        </button>
-                      </div>
-                    ) : (
-                      opsInStg.map((op) => {
-                        const { glow, border } = getGlowAndAccent(op.stage);
-                        const isHighValue = op.value >= 10000000;
-                        const hasHighProbability = op.probability >= 80;
-  
-                        return (
-                          <div
-                            key={op.id}
-                            onClick={() => setSelectedOportunidadeId(op.id)}
-                            className={`bg-white rounded-xl p-4.5 border border-zinc-200/80 shadow-2xs transition-all duration-300 relative overflow-hidden group/card cursor-pointer ${border} ${glow}`}
+
+                    {/* Column cards bucket */}
+                    <div className="space-y-3">
+                      {opsInStg.length === 0 ? (
+                        /* Elegant Empty State inside individual columns */
+                        <div className="flex flex-col items-center justify-center py-10 px-3 border border-dashed border-zinc-300 rounded-xl bg-white/40 text-center animate-fade-in my-1.5">
+                          <FolderOpen
+                            className="h-7.5 w-7.5 text-zinc-300 mb-2.5 animate-bounce"
+                            style={{ animationDuration: "3.5s" }}
+                          />
+                          <p className="text-[10px] font-bold text-zinc-500 leading-snug">Vazio nesta Etapa</p>
+                          <p className="text-[9px] text-zinc-400 mt-1 leading-snug max-w-[140px] mx-auto">
+                            Nenhuma proposta na triagem comercial de {stg.toLowerCase()}.
+                          </p>
+                          <button
+                            onClick={() => {
+                              setStage(stg);
+                              setIsAdding(true);
+                            }}
+                            className="mt-3 py-1 px-2 border border-zinc-200 bg-white hover:bg-zinc-50 text-[9px] font-mono font-bold text-zinc-600 rounded-lg shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                           >
-                            {/* Animated "Hot Lead/Alta Probabilidade" active badge */}
-                            {(isHighValue || hasHighProbability) && (
-                              <div className="absolute top-2 right-2 flex items-center gap-1">
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                            <Plus className="h-3 w-3 text-primary" /> Criar Proposta
+                          </button>
+                        </div>
+                      ) : (
+                        opsInStg.map((op) => {
+                          const { glow, border } = getGlowAndAccent(op.stage);
+                          const isHighValue = op.value >= 10000000;
+                          const hasHighProbability = op.probability >= 80;
+
+                          return (
+                            <div
+                              key={op.id}
+                              onClick={() => setSelectedOportunidadeId(op.id)}
+                              className={`bg-white rounded-xl p-4.5 border border-zinc-200/80 shadow-2xs transition-all duration-300 relative overflow-hidden group/card cursor-pointer ${border} ${glow}`}
+                            >
+                              {/* Animated "Hot Lead/Alta Probabilidade" active badge */}
+                              {(isHighValue || hasHighProbability) && (
+                                <div className="absolute top-2 right-2 flex items-center gap-1">
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                  </span>
+                                  <span className="text-[7.5px] font-black font-mono tracking-wider text-emerald-600 uppercase select-none">
+                                    HOT DEAL
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Top row with title and trash delete trigger */}
+                              <div className="flex items-start justify-between gap-3 pr-[14px]">
+                                <span className="text-xs font-bold text-zinc-850 font-sans block truncate max-w-[160px] leading-tight group-hover/card:text-primary transition-colors" title={op.title}>
+                                  {op.title}
                                 </span>
-                                <span className="text-[7.5px] font-black font-mono tracking-wider text-emerald-600 uppercase select-none">
-                                  HOT DEAL
-                                </span>
-                              </div>
-                            )}
-  
-                            {/* Top row with title and trash delete trigger */}
-                            <div className="flex items-start justify-between gap-3 pr-[14px]">
-                              <span className="text-xs font-bold text-zinc-850 font-sans block truncate max-w-[160px] leading-tight group-hover/card:text-primary transition-colors" title={op.title}>
-                                {op.title}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteOp(op.id, op.title);
-                                }}
-                                className="p-1 rounded-md text-zinc-300 hover:text-rose-500 hover:bg-rose-50 cursor-pointer select-none transition-all duration-150 shrink-0 opacity-0 group-hover/card:opacity-100"
-                                title="Remover oportunidade"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
-                            </div>
-  
-                            {/* Client company name */}
-                            <p className="text-[9.5px] text-zinc-500 font-sans mt-2.5 flex items-center gap-1.5 uppercase tracking-wide truncate">
-                              <Building2 className="h-3 w-3 inline text-zinc-400 shrink-0" /> {op.client}
-                            </p>
-  
-                            {/* Trending and Probability Indicator Row */}
-                            <div className="mt-3.5 flex items-center justify-between gap-2">
-                              {/* Animated system trend badge */}
-                              <div className="flex items-center gap-1">
-                                {op.probability >= 70 ? (
-                                  <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
-                                    <TrendingUp className="h-2.5 w-2.5 animate-pulse" /> UP
-                                  </div>
-                                ) : op.probability <= 30 ? (
-                                  <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-100">
-                                    <TrendingDown className="h-2.5 w-2.5 animate-bounce" /> RISCO
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 bg-zinc-50 px-1.5 py-0.5 rounded-md border border-zinc-150">
-                                    <span>→ NEUTRO</span>
-                                  </div>
-                                )}
-                              </div>
-  
-                              {/* Probability Value Badge */}
-                              <span className={`text-[9.2px] font-mono font-extrabold px-1.5 py-0.5 rounded-md border ${getProbabilityColor(op.probability)}`}>
-                                P: {op.probability}%
-                              </span>
-                            </div>
-  
-                            {/* Custom Gradient Slider for direct probability manipulation */}
-                            <div className="mt-3 space-y-1">
-                              <div className="flex items-center justify-between text-[9px] text-zinc-400 font-mono">
-                                <span>Sensibilidade do Funil</span>
-                                <span className="font-bold">{op.probability < 50 ? "Fraca" : op.probability < 80 ? "Moderada" : "Alta"}</span>
-                              </div>
-                              <div className="relative group/slider pt-0.5">
-                                {/* Glowing background slider */}
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="100"
-                                  value={op.probability}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => handleProbabilityChange(op.id, parseInt(e.target.value))}
-                                  className="w-full h-1 my-1.5 rounded-full appearance-none cursor-ew-resize focus:outline-hidden relative [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-zinc-300 [&::-webkit-slider-thumb]:shadow-md hover:[&::-webkit-slider-thumb]:scale-125 hover:[&::-webkit-slider-thumb]:bg-primary hover:[&::-webkit-slider-thumb]:border-primary transition-all duration-150"
-                                  style={{
-                                    background: `linear-gradient(to right, #f43f5e, #eab308, #10b981 ${op.probability}%, #e4e4e7 ${op.probability}%)`,
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteOp(op.id, op.title);
                                   }}
-                                />
+                                  className="p-1 rounded-md text-zinc-300 hover:text-rose-500 hover:bg-rose-50 cursor-pointer select-none transition-all duration-150 shrink-0 opacity-0 group-hover/card:opacity-100"
+                                  title="Remover oportunidade"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
                               </div>
-                            </div>
-  
-                            {/* Card Footer: Financial estimation and owner with stage advancement controls */}
-                            <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-zinc-100">
-                              <span className="text-[11px] font-black font-mono text-zinc-900">
-                                R$ {(op.value / 1000000).toFixed(2)}M
-                              </span>
-  
-                              {/* Easy pipeline quick controls */}
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-mono text-zinc-400 truncate max-w-[65px] mr-1" title={op.owner}>
-                                  {op.owner.split(" ").slice(-1)[0]}
+
+                              {/* Client company name */}
+                              <p className="text-[9.5px] text-zinc-500 font-sans mt-2.5 flex items-center gap-1.5 uppercase tracking-wide truncate">
+                                <Building2 className="h-3 w-3 inline text-zinc-400 shrink-0" /> {op.client}
+                              </p>
+
+                              {/* Trending and Probability Indicator Row */}
+                              <div className="mt-3.5 flex items-center justify-between gap-2">
+                                {/* Animated system trend badge */}
+                                <div className="flex items-center gap-1">
+                                  {op.probability >= 70 ? (
+                                    <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100">
+                                      <TrendingUp className="h-2.5 w-2.5 animate-pulse" /> UP
+                                    </div>
+                                  ) : op.probability <= 30 ? (
+                                    <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-100">
+                                      <TrendingDown className="h-2.5 w-2.5 animate-bounce" /> RISCO
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 bg-zinc-50 px-1.5 py-0.5 rounded-md border border-zinc-150">
+                                      <span>→ NEUTRO</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Probability Value Badge */}
+                                <span className={`text-[9.2px] font-mono font-extrabold px-1.5 py-0.5 rounded-md border ${getProbabilityColor(op.probability)}`}>
+                                  P: {op.probability}%
                                 </span>
-                                
-                                <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-lg p-0.5 shadow-2xs">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      moveStage(op.id, "back");
+                              </div>
+
+                              {/* Custom Gradient Slider for direct probability manipulation */}
+                              <div className="mt-3 space-y-1">
+                                <div className="flex items-center justify-between text-[9px] text-zinc-400 font-mono">
+                                  <span>Sensibilidade do Funil</span>
+                                  <span className="font-bold">{op.probability < 50 ? "Fraca" : op.probability < 80 ? "Moderada" : "Alta"}</span>
+                                </div>
+                                <div className="relative group/slider pt-0.5">
+                                  {/* Glowing background slider */}
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={op.probability}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => handleProbabilityChange(op.id, parseInt(e.target.value))}
+                                    className="w-full h-1 my-1.5 rounded-full appearance-none cursor-ew-resize focus:outline-hidden relative [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-zinc-300 [&::-webkit-slider-thumb]:shadow-md hover:[&::-webkit-slider-thumb]:scale-125 hover:[&::-webkit-slider-thumb]:bg-primary hover:[&::-webkit-slider-thumb]:border-primary transition-all duration-150"
+                                    style={{
+                                      background: `linear-gradient(to right, #f43f5e, #eab308, #10b981 ${op.probability}%, #e4e4e7 ${op.probability}%)`,
                                     }}
-                                    disabled={stages.indexOf(op.stage) === 0}
-                                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:pointer-events-none hover:bg-white active:scale-90 transition-all cursor-pointer"
-                                    title="Retornar estágio anterior"
-                                  >
-                                    <ChevronLeft className="h-3 w-3" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      moveStage(op.id, "forward");
-                                    }}
-                                    disabled={stages.indexOf(op.stage) === stages.length - 1}
-                                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:pointer-events-none hover:bg-white active:scale-90 transition-all cursor-pointer"
-                                    title="Avançar estágio"
-                                  >
-                                    <ChevronRight className="h-3 w-3" />
-                                  </button>
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Card Footer: Financial estimation and owner with stage advancement controls */}
+                              <div className="flex items-center justify-between mt-3.5 pt-3.5 border-t border-zinc-100">
+                                <span className="text-[11px] font-black font-mono text-zinc-900">
+                                  R$ {(op.value / 1000000).toFixed(2)}M
+                                </span>
+
+                                {/* Easy pipeline quick controls */}
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-mono text-zinc-400 truncate max-w-[65px] mr-1" title={op.owner}>
+                                    {op.owner.split(" ").slice(-1)[0]}
+                                  </span>
+
+                                  <div className="flex items-center bg-zinc-50 border border-zinc-200 rounded-lg p-0.5 shadow-2xs">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        moveStage(op.id, "back");
+                                      }}
+                                      disabled={stages.indexOf(op.stage) === 0}
+                                      className="p-1 rounded-md text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:pointer-events-none hover:bg-white active:scale-90 transition-all cursor-pointer"
+                                      title="Retornar estágio anterior"
+                                    >
+                                      <ChevronLeft className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        moveStage(op.id, "forward");
+                                      }}
+                                      disabled={stages.indexOf(op.stage) === stages.length - 1}
+                                      className="p-1 rounded-md text-zinc-400 hover:text-zinc-800 disabled:opacity-20 disabled:pointer-events-none hover:bg-white active:scale-90 transition-all cursor-pointer"
+                                      title="Avançar estágio"
+                                    >
+                                      <ChevronRight className="h-3 w-3" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column statistics summary footer */}
+                  <div className="mt-5 pt-3 border-t border-zinc-200/60 text-center font-mono">
+                    <span className="text-[8px] tracking-widest text-zinc-400 uppercase">
+                      Logística Real-Time CRM
+                    </span>
                   </div>
                 </div>
-  
-                {/* Column statistics summary footer */}
-                <div className="mt-5 pt-3 border-t border-zinc-200/60 text-center font-mono">
-                  <span className="text-[8px] tracking-widest text-zinc-400 uppercase">
-                    Logística Real-Time CRM
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Creation Proposal Modal Wrapper with Framer Motion FadeInScale Animation */}
       <AnimatePresence>
         {isAdding && (
@@ -642,7 +666,7 @@ export default function OportunidadesView() {
               className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md cursor-pointer"
             />
 
-             {/* Elastic scale sheet */}
+            {/* Elastic scale sheet */}
             <motion.form
               onSubmit={(e) => {
                 if (addMethod === "ai") {
@@ -655,9 +679,8 @@ export default function OportunidadesView() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 15 }}
               transition={{ type: "spring", duration: 0.45, bounce: 0.2 }}
-              className={`bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden font-sans relative z-10 transition-all duration-300 ${
-                addMethod === "ai" ? "max-w-md" : "max-w-sm"
-              }`}
+              className={`bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full overflow-hidden font-sans relative z-10 transition-all duration-300 ${addMethod === "ai" ? "max-w-md" : "max-w-sm"
+                }`}
             >
               {/* Modal header */}
               <div className="p-4 bg-zinc-900 text-white flex items-center justify-between border-b border-zinc-800">
@@ -678,22 +701,20 @@ export default function OportunidadesView() {
                 <button
                   type="button"
                   onClick={() => setAddMethod("manual")}
-                  className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    addMethod === "manual"
+                  className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${addMethod === "manual"
                       ? "bg-white text-zinc-950 border border-zinc-200/50 shadow-xs"
                       : "text-zinc-500 hover:text-zinc-800"
-                  }`}
+                    }`}
                 >
                   Ficha Manual
                 </button>
                 <button
                   type="button"
                   onClick={() => setAddMethod("ai")}
-                  className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    addMethod === "ai"
+                  className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${addMethod === "ai"
                       ? "bg-white text-[hsl(var(--color-primary))] border border-zinc-200/50 shadow-xs"
                       : "text-zinc-500 hover:text-zinc-800"
-                  }`}
+                    }`}
                 >
                   <Sparkles className="h-3.5 w-3.5 text-primary" /> Extrair com IA ✨
                 </button>

@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const { currentRoute, setCurrentRoute, sidebarOpen, setSidebarOpen, getActiveProject } = useApp();
+  const { currentRoute, setCurrentRoute, sidebarOpen, setSidebarOpen, getActiveProject, currentUser } = useApp();
   const [financeiroExpanded, setFinanceiroExpanded] = useState(true);
 
   if (!sidebarOpen) return null;
@@ -43,8 +43,17 @@ export default function Sidebar() {
       setSidebarOpen(false);
     }
   };
-  
+
   const currentObra = getActiveProject();
+  const userName = currentUser?.displayName || currentUser?.email || "Usuário EVIS";
+  const userEmail = currentUser?.email || "email não informado";
+  const initials = userName
+    .split(/\s|@/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "UE";
 
   const financeiroItems = [
     { label: "Resumo", route: "financeiro-resumo" as MenuRoute, icon: CircleCheck },
@@ -106,11 +115,10 @@ export default function Sidebar() {
           <div className="space-y-1">
             <button
               onClick={() => navigate("dashboard")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "dashboard"
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "dashboard"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-md"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <LayoutDashboard className={`h-4 w-4 ${currentRoute === "dashboard" ? "text-primary animate-pulse" : "text-sidebar-muted"}`} />
               Painel de Controle
@@ -124,33 +132,30 @@ export default function Sidebar() {
             </span>
             <button
               onClick={() => navigate("oportunidades")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "oportunidades"
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "oportunidades"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <Briefcase className={`h-4 w-4 ${currentRoute === "oportunidades" ? "text-primary" : "text-sidebar-muted"}`} />
               Oportunidades (CRM)
             </button>
             <button
               onClick={() => navigate("obras")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "obras"
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "obras"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <LayoutDashboard className={`h-4 w-4 ${currentRoute === "obras" ? "text-primary" : "text-sidebar-muted"}`} />
               Projetos (Visão Global)
             </button>
             <button
               onClick={() => navigate("obra-detail")}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "obra-detail"
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "obra-detail"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-[3px] border-primary shadow-sm"
                   : "text-sidebar-foreground border-l-[3px] border-transparent hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <HardHat className={`h-4 w-4 ${currentRoute === "obra-detail" ? "text-primary" : "text-sidebar-muted"}`} />
@@ -159,22 +164,20 @@ export default function Sidebar() {
             </button>
             <button
               onClick={() => navigate("tarefas")}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "tarefas"
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "tarefas"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <CheckCircle2 className={`h-4 w-4 ${currentRoute === "tarefas" ? "text-primary" : "text-sidebar-muted"}`} />
               Tarefas de Engenharia
             </button>
             <button
               onClick={() => navigate("workspace")}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "workspace"
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "workspace"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <Cloud className={`h-4 w-4 ${currentRoute === "workspace" ? "text-primary" : "text-sidebar-primary"}`} />
@@ -184,11 +187,10 @@ export default function Sidebar() {
             </button>
             <button
               onClick={() => navigate("mapa-agentes")}
-              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
-                currentRoute === "mapa-agentes"
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "mapa-agentes"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <Bot className={`h-4 w-4 ${currentRoute === "mapa-agentes" ? "text-purple-600" : "text-purple-500"}`} />
@@ -206,7 +208,7 @@ export default function Sidebar() {
               <span>Financeiro Obra</span>
               <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 transform ${financeiroExpanded ? "rotate-180 text-sidebar-foreground" : "rotate-0"}`} />
             </button>
-            
+
             {financeiroExpanded && (
               <div className="pl-1.5 space-y-1 mt-1 border-l border-sidebar-border ml-3 animate-slide-in-up">
                 {financeiroItems.map((fi) => {
@@ -216,11 +218,10 @@ export default function Sidebar() {
                     <button
                       key={fi.route}
                       onClick={() => navigate(fi.route)}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded transition-all duration-150 cursor-pointer hover:translate-x-0.5 ${
-                        isActive
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium rounded transition-all duration-150 cursor-pointer hover:translate-x-0.5 ${isActive
                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                           : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                      }`}
+                        }`}
                     >
                       <Icon className={`h-3.5 w-3.5 ${isActive ? "text-primary animate-bounce-in" : "text-sidebar-muted"}`} />
                       {fi.label}
@@ -236,7 +237,7 @@ export default function Sidebar() {
             <span className="px-3 text-[10px] font-mono font-bold text-sidebar-muted uppercase tracking-wider block">
               Configurações & Cadastros
             </span>
-            
+
             {/* Registers subgroup */}
             <div className="space-y-1">
               <span className="px-3 text-[9px] font-sans text-sidebar-muted block font-medium">Cadastros</span>
@@ -244,11 +245,10 @@ export default function Sidebar() {
                 <button
                   key={cad.route}
                   onClick={() => navigate(cad.route)}
-                  className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${
-                    currentRoute === cad.route
+                  className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${currentRoute === cad.route
                       ? "text-sidebar-accent-foreground font-semibold bg-sidebar-accent"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }`}
+                    }`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full ${currentRoute === cad.route ? "bg-primary" : "bg-sidebar-muted"}`}></span>
                   {cad.label}
@@ -263,11 +263,10 @@ export default function Sidebar() {
                 <button
                   key={conf.route}
                   onClick={() => navigate(conf.route)}
-                  className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${
-                    currentRoute === conf.route
+                  className={`w-full flex items-center gap-2 px-3 py-1 text-[11px] font-medium rounded transition-all pl-6 cursor-pointer ${currentRoute === conf.route
                       ? "text-sidebar-accent-foreground font-semibold bg-sidebar-accent"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                  }`}
+                    }`}
                 >
                   <span className={`h-1.5 w-1.5 rounded-full ${currentRoute === conf.route ? "bg-primary" : "bg-sidebar-muted"}`}></span>
                   {conf.label}
@@ -301,14 +300,14 @@ export default function Sidebar() {
         </div>
         <div className="mt-3 flex items-center gap-2.5 px-2">
           <div className="h-7 w-7 rounded-full bg-sidebar-accent flex items-center justify-center text-white font-mono font-semibold text-xs shrink-0 uppercase">
-            EB
+            {initials}
           </div>
           <div className="truncate">
             <span className="text-[10px] text-sidebar-foreground font-semibold block leading-none">
-              Engenheiro Berti
+              {userName}
             </span>
             <span className="text-[9px] text-sidebar-muted truncate block font-mono">
-              berti@curitibaconstrutora...
+              {userEmail}
             </span>
           </div>
         </div>

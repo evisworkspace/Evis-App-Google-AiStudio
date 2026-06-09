@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "../lib/auth";
-import { createCompany } from "../services/companyService";
+import { createOportunidade, getOportunidades } from "../services/oportunidadeService";
+import { getObras, updateObra } from "../services/obraService";
 import {
   Obra,
   Oportunidade,
@@ -13,8 +14,6 @@ import {
   Task,
   MenuRoute,
   AppTheme,
-  INITIAL_OBRAS,
-  INITIAL_OPORTUNIDADES,
   INITIAL_ACCOUNTS,
   INITIAL_LANCAMENTOS,
   INITIAL_PURCHASES,
@@ -40,7 +39,11 @@ interface AppContextType {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   currentRoute: MenuRoute;
+  activeRoute: MenuRoute;
   setCurrentRoute: (route: MenuRoute) => void;
+  navigate: (route: MenuRoute) => void;
+  isWhatsAppOpen: boolean;
+  setIsWhatsAppOpen: (open: boolean) => void;
   theme: AppTheme;
   setTheme: (theme: AppTheme) => void;
 
@@ -69,7 +72,7 @@ interface AppContextType {
   addRdo: (obraId: string, weather: string, workers: number, progressNote: string, observations: string) => void;
   addMedicao: (obraId: string, amount: number, description: string) => void;
   addLancamento: (description: string, amount: number, type: "receita" | "despesa", category: string, bankAccountId: string, projectId?: string) => void;
-  addOportunidade: (title: string, client: string, value: number, initialStage: Oportunidade["stage"]) => void;
+  addOportunidade: (title: string, client: string, value: number, initialStage: Oportunidade["stage"], probability?: number) => Promise<Oportunidade | null>;
 
   // Premium Toast System
   toasts: Toast[];
@@ -82,6 +85,26 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const EMPTY_OBRA: Obra = {
+  id: "",
+  obraId: "",
+  name: "Nenhuma obra selecionada",
+  location: "",
+  description: "",
+  progress: 0,
+  budgetTotal: 0,
+  budgetSpent: 0,
+  status: "Planejamento",
+  startDate: "",
+  endDate: "",
+  manager: "",
+  equipe: [],
+  documentos: [],
+  rdoList: [],
+  medicoesList: [],
+  orcamentoInsumos: [],
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -90,8 +113,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState<MenuRoute>("dashboard");
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("ob_1");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [activeSubTab, setActiveSubTab] = useState<string>("geral");
 
   const [theme, setThemeState] = useState<AppTheme>(() => {
@@ -130,31 +154,74 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setThemeState(t);
   };
 
+  const navigate = useCallback((route: MenuRoute) => {
+    setCurrentRoute(route);
+  }, []);
+
   // Domain states
-  const [obras, setObras] = useState<Obra[]>(INITIAL_OBRAS);
-  const [oportunidades, setOportunidades] = useState<Oportunidade[]>(INITIAL_OPORTUNIDADES);
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [accounts, setAccounts] = useState<BankAccount[]>(INITIAL_ACCOUNTS);
   const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>(INITIAL_LANCAMENTOS);
   const [purchases, setPurchases] = useState<PurchaseOrder[]>(INITIAL_PURCHASES);
   const [insumos, setInsumos] = useState<Insumo[]>(INITIAL_INSUMOS);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!companyId) {
+      setObras([]);
+      setOportunidades([]);
+      setSelectedProjectId("");
+      return;
+    }
+
+    const loadFirestoreData = async () => {
+      try {
+        const [loadedObras, loadedOportunidades] = await Promise.all([
+          getObras(companyId),
+          getOportunidades(companyId),
+        ]);
+
+        if (cancelled) return;
+
+        setObras(loadedObras);
+        setOportunidades(loadedOportunidades);
+        setSelectedProjectId((current) => {
+          if (current && loadedObras.some((obra) => obra.id === current)) return current;
+          return loadedObras[0]?.id || "";
+        });
+      } catch (error) {
+        console.error("Erro ao carregar dados do Firestore:", error);
+      }
+    };
+
+    loadFirestoreData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId]);
+
   const getActiveProject = () => {
-    return obras.find((o) => o.id === selectedProjectId) || obras[0];
+    return obras.find((o) => o.id === selectedProjectId) || obras[0] || EMPTY_OBRA;
   };
 
   const addRdo = (obraId: string, weather: string, workers: number, progressNote: string, observations: string) => {
+    const obraAtual = obras.find((o) => o.id === obraId);
+    const newRdo = {
+      id: `rdo_${Date.now()}`,
+      date: new Date().toISOString().split("T")[0],
+      weather,
+      workers,
+      progressNote,
+      observations,
+    };
+
     setObras((prev) =>
       prev.map((o) => {
         if (o.id === obraId) {
-          const newRdo = {
-            id: `rdo_${Date.now()}`,
-            date: new Date().toISOString().split("T")[0],
-            weather,
-            workers,
-            progressNote,
-            observations,
-          };
           return {
             ...o,
             rdoList: [newRdo, ...o.rdoList],
@@ -163,19 +230,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return o;
       })
     );
+
+    if (companyId && obraAtual) {
+      updateObra(companyId, obraId, { rdoList: [newRdo, ...obraAtual.rdoList] }).catch((error) => {
+        console.error("Erro ao persistir RDO:", error);
+      });
+    }
   };
 
   const addMedicao = (obraId: string, amount: number, description: string) => {
+    const obraAtual = obras.find((o) => o.id === obraId);
+    const newMedicao = {
+      id: `med_${Date.now()}`,
+      date: new Date().toISOString().split("T")[0],
+      amount,
+      description,
+      status: "Pendente" as const,
+    };
+
     setObras((prev) =>
       prev.map((o) => {
         if (o.id === obraId) {
-          const newMedicao = {
-            id: `med_${Date.now()}`,
-            date: new Date().toISOString().split("T")[0],
-            amount,
-            description,
-            status: "Pendente" as const,
-          };
           return {
             ...o,
             medicoesList: [newMedicao, ...o.medicoesList],
@@ -184,6 +259,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return o;
       })
     );
+
+    if (companyId && obraAtual) {
+      updateObra(companyId, obraId, { medicoesList: [newMedicao, ...obraAtual.medicoesList] }).catch((error) => {
+        console.error("Erro ao persistir medição:", error);
+      });
+    }
   };
 
   const addLancamento = (
@@ -227,10 +308,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setObras((prevObras) =>
         prevObras.map((o) => {
           if (o.id === projectId) {
-            return {
+            const updatedObra = {
               ...o,
               budgetSpent: o.budgetSpent + amount,
               progress: Math.min(Math.round(((o.budgetSpent + amount) / o.budgetTotal) * 100), 100),
+            };
+            if (companyId) {
+              updateObra(companyId, o.id, {
+                budgetSpent: updatedObra.budgetSpent,
+                progress: updatedObra.progress,
+              }).catch((error) => {
+                console.error("Erro ao persistir orçamento da obra:", error);
+              });
+            }
+            return {
+              ...updatedObra,
             };
           }
           return o;
@@ -239,18 +331,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addOportunidade = (title: string, client: string, value: number, initialStage: Oportunidade["stage"]) => {
+  const addOportunidade = async (
+    title: string,
+    client: string,
+    value: number,
+    initialStage: Oportunidade["stage"],
+    probability?: number
+  ) => {
+    if (!companyId) {
+      throw new Error("Empresa não selecionada para salvar a oportunidade.");
+    }
+
+    const owner = currentUser?.displayName || currentUser?.email || "Usuário EVIS";
     const newOp: Oportunidade = {
-      id: `op_${Date.now()}`,
+      id: "",
       title,
       client,
       value,
       stage: initialStage,
       date: new Date().toISOString().split("T")[0],
-      owner: "Eng. Berti",
-      probability: initialStage === "Ganho" ? 100 : initialStage === "Negociação" ? 75 : 50,
+      owner,
+      probability: probability ?? (initialStage === "Ganho" ? 100 : initialStage === "Negociação" ? 75 : 50),
     };
-    setOportunidades((prev) => [newOp, ...prev]);
+
+    const created = await createOportunidade(companyId, newOp);
+    setOportunidades((prev) => [created, ...prev]);
+    return created;
   };
 
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -279,7 +385,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         sidebarOpen,
         setSidebarOpen,
         currentRoute,
+        activeRoute: currentRoute,
         setCurrentRoute,
+        navigate,
+        isWhatsAppOpen,
+        setIsWhatsAppOpen,
         theme,
         setTheme,
         selectedProjectId,

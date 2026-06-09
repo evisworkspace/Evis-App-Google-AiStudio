@@ -32,7 +32,8 @@ export default function FinanceiroView() {
     accounts,
     lancamentos,
     addLancamento,
-    obras
+    obras,
+    showToast
   } = useApp();
 
   const [descFilter, setDescFilter] = useState("");
@@ -81,7 +82,7 @@ export default function FinanceiroView() {
     }
 
     // Book as despesa in origin and receita in destination
-    addLancamento(`Transferência: Saída para ${accounts.find((a)=>a.id===toAcc)?.name}`, parsed, "despesa", "Transferência", fromAcc);
+    addLancamento(`Transferência: Saída para ${accounts.find((a) => a.id === toAcc)?.name}`, parsed, "despesa", "Transferência", fromAcc);
     addLancamento(`Transferência: Entrada vinda de ${source?.name}`, parsed, "receita", "Transferência", toAcc);
 
     setTransferAmount("");
@@ -110,24 +111,24 @@ export default function FinanceiroView() {
           {/* Vera Financeira (Auditora de Caixa) */}
           <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/40 rounded-lg p-5 shadow-sm">
             <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-emerald-800 dark:text-emerald-400 mb-2 flex items-center gap-2">
-               <Sparkles className="h-4 w-4" /> Vera Financeira (Auditora de Caixa)
+              <Sparkles className="h-4 w-4" /> Vera Financeira (Auditora de Caixa)
             </h3>
             <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">
-               Contas conciliadas com sucesso. O caixa projetado fica pressionado neste período.<br/>
-               Esta despesa no "Residencial Kairo" pode comprometer a margem da obra.<br/>
-               Lançamentos financeiros exigem confirmação.
+              Contas conciliadas com sucesso. O caixa projetado fica pressionado neste período.<br />
+              Esta despesa no "Residencial Kairo" pode comprometer a margem da obra.<br />
+              Lançamentos financeiros exigem confirmação.
             </p>
             <div className="mt-3 flex gap-3">
-               <button className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-all cursor-pointer rounded shadow-sm"
-                 onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-               >
-                 Analisar impactos do Kairo
-               </button>
-               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer rounded shadow-sm"
-                 onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
-               >
-                 Simular projeção (30 dias)
-               </button>
+              <button className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-all cursor-pointer rounded shadow-sm"
+                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+              >
+                Analisar impactos do Kairo
+              </button>
+              <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer rounded shadow-sm"
+                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+              >
+                Simular projeção (30 dias)
+              </button>
             </div>
           </div>
 
@@ -273,12 +274,11 @@ export default function FinanceiroView() {
                       <tr key={ln.id} className="hover:bg-zinc-50/50">
                         <td className="py-2.5">
                           <span className="font-semibold text-zinc-850 block">{ln.description}</span>
-                          <span className="text-[9.5px] font-mono text-zinc-400 mt-0.5 block">{ln.date} • {accounts.find(a=>a.id === ln.bankAccount)?.name}</span>
+                          <span className="text-[9.5px] font-mono text-zinc-400 mt-0.5 block">{ln.date} • {accounts.find(a => a.id === ln.bankAccount)?.name}</span>
                         </td>
                         <td className="py-2.5 font-mono text-[10.5px] text-zinc-500">{ln.category}</td>
-                        <td className={`py-2.5 text-right font-mono font-bold ${
-                          ln.type === "receita" ? "text-emerald-600" : "text-rose-600"
-                        }`}>
+                        <td className={`py-2.5 text-right font-mono font-bold ${ln.type === "receita" ? "text-emerald-600" : "text-rose-600"
+                          }`}>
                           {ln.type === "receita" ? "+" : "-"} R$ {ln.amount.toLocaleString()}
                         </td>
                         <td className="py-2.5 text-center">
@@ -311,7 +311,7 @@ export default function FinanceiroView() {
                 <div>
                   <span className="text-[9.5px] font-mono font-bold text-emerald-600 uppercase bg-emerald-100/50 px-1.5 py-0.5 rounded leading-none">RECEITA AUDITADA</span>
                   <p className="font-semibold text-zinc-800 font-sans mt-2">{rec.description}</p>
-                  <span className="text-[9.5px] font-mono text-zinc-400 block mt-1">Lançado: {rec.date} • Caixa: {accounts.find(a=>a.id===rec.bankAccount)?.name}</span>
+                  <span className="text-[9.5px] font-mono text-zinc-400 block mt-1">Lançado: {rec.date} • Caixa: {accounts.find(a => a.id === rec.bankAccount)?.name}</span>
                 </div>
                 <span className="text-sm font-mono font-bold text-emerald-600 shrink-0">
                   + R$ {rec.amount.toLocaleString()}
@@ -353,13 +353,13 @@ export default function FinanceiroView() {
               <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 border-b border-zinc-100 pb-3 block">
                 Leitor Automático de Notas XML / PDF
               </h3>
-              
+
               <div className="border-2 border-dashed border-zinc-200 hover:border-blue-500 rounded-lg p-8 mt-4.5 text-center cursor-pointer transition-colors">
                 <Upload className="h-8 w-8 text-zinc-400 mx-auto mb-2 animate-bounce" />
                 <span className="text-xs font-bold text-zinc-800 block">Arraste a Nota Fiscal Técnica</span>
                 <span className="text-[10px] text-zinc-400 font-mono mt-1 block">Suporta Danfe XML ou PDF de Insumos</span>
               </div>
-              
+
               <p className="text-[10px] text-zinc-450 mt-3Leading-relaxed text-center">
                 O assistente EVIS detectará automaticamente o valor do faturamento, CNPJ do fornecedor e impostos de prefeitura retidos no ato do upload.
               </p>
@@ -418,24 +418,24 @@ export default function FinanceiroView() {
                       if (res) token = res.accessToken;
                       else return;
                     }
-                    
+
                     const rows = [
                       ["ID", "Data", "Descrição", "Categoria", "Valor", "Tipo", "Conta"],
                       ...lancamentos.map(L => [
-                        L.id, 
-                        L.date, 
-                        L.description, 
-                        L.category, 
-                        L.amount.toString(), 
-                        L.type, 
-                        accounts.find(a=>a.id===L.bankAccount)?.name || L.bankAccount
+                        L.id,
+                        L.date,
+                        L.description,
+                        L.category,
+                        L.amount.toString(),
+                        L.type,
+                        accounts.find(a => a.id === L.bankAccount)?.name || L.bankAccount
                       ])
                     ];
 
                     const url = await createGoogleSheet(token!, `EVIS - Diário Fluxo de Caixa ${new Date().toLocaleDateString('pt-BR')}`, rows);
-                    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+                    showToast("Planilha criada no Google Sheets.", "success");
                     window.open(url, "_blank");
-                  } catch(e: any) {
+                  } catch (e: any) {
                     alert(`Erro exportando Sheets: ${e.message}`);
                   }
                 }}
@@ -477,12 +477,11 @@ export default function FinanceiroView() {
                       </td>
                       <td className="py-2.5">
                         <span className="font-semibold text-zinc-800 block">{ln.description}</span>
-                        <span className="text-[9.5px] text-zinc-400 font-mono mt-0.5 block">{accounts.find(a=>a.id===ln.bankAccount)?.name}</span>
+                        <span className="text-[9.5px] text-zinc-400 font-mono mt-0.5 block">{accounts.find(a => a.id === ln.bankAccount)?.name}</span>
                       </td>
                       <td className="py-2.5 text-[10.5px] font-mono text-zinc-500">{ln.category}</td>
-                      <td className={`py-2.5 text-right font-mono font-bold ${
-                        ln.type === "receita" ? "text-emerald-600" : "text-rose-600"
-                      }`}>
+                      <td className={`py-2.5 text-right font-mono font-bold ${ln.type === "receita" ? "text-emerald-600" : "text-rose-600"
+                        }`}>
                         {ln.type === "receita" ? "+" : "-"} R$ {ln.amount.toLocaleString()}
                       </td>
                       <td className="py-2.5 text-center">
@@ -594,7 +593,7 @@ export default function FinanceiroView() {
               <text x="380" y="225" fill="#64748b" fontSize="8" fontFamily="sans-serif">Junho (Hoje)</text>
             </svg>
           </div>
-          
+
           <div className="flex gap-4 text-xs font-mono font-semibold justify-center mt-3 border-t border-zinc-100 pt-3">
             <span className="flex items-center gap-1"><span className="h-2 w-4 bg-emerald-500 rounded-sm"></span> ENTRADAS (RECEITAS)</span>
             <span className="flex items-center gap-1"><span className="h-2 w-4 bg-rose-500 rounded-sm"></span> SAÍDAS (DESPESAS)</span>
@@ -636,12 +635,11 @@ export default function FinanceiroView() {
               ].map((row, i) => (
                 <div
                   key={i}
-                  className={`grid grid-cols-3 py-2.5 px-3 border-b border-zinc-100 ${
-                    row.type === "head" ? "font-bold text-zinc-90 w" :
-                    row.type === "mid" ? "font-bold text-blue-600 bg-zinc-50/50" :
-                    row.type === "mid_accent" ? "font-bold text-white bg-[hsl(var(--color-primary))]" :
-                    "text-zinc-650 pl-6"
-                  }`}
+                  className={`grid grid-cols-3 py-2.5 px-3 border-b border-zinc-100 ${row.type === "head" ? "font-bold text-zinc-90 w" :
+                      row.type === "mid" ? "font-bold text-blue-600 bg-zinc-50/50" :
+                        row.type === "mid_accent" ? "font-bold text-white bg-[hsl(var(--color-primary))]" :
+                          "text-zinc-650 pl-6"
+                    }`}
                 >
                   <span>{row.label}</span>
                   <span className="text-right font-mono font-semibold">
@@ -663,7 +661,7 @@ export default function FinanceiroView() {
           <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-900 border-b border-zinc-100 pb-3 mb-4 block">
             Classificação Hierárquica de Contas e Categorias
           </h3>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {categoriesList.map((cat, idx) => (
               <div key={idx} className="p-4 bg-zinc-50 border border-zinc-150 rounded hover:border-zinc-250 transition-colors">
