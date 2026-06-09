@@ -50,6 +50,8 @@ interface AppContextType {
   // Active states
   selectedProjectId: string;
   setSelectedProjectId: (id: string) => void;
+  selectedOportunidadeId: string | null;
+  setSelectedOportunidadeId: (id: string | null) => void;
   getActiveProject: () => Obra;
 
   // Core Business entities
@@ -116,6 +118,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState<MenuRoute>("dashboard");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<string>("geral");
 
   const [theme, setThemeState] = useState<AppTheme>(() => {
@@ -394,6 +397,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setTheme,
         selectedProjectId,
         setSelectedProjectId,
+        selectedOportunidadeId,
+        setSelectedOportunidadeId,
         activeSubTab,
         setActiveSubTab,
         getActiveProject,

@@ -58,7 +58,7 @@ function AppContent() {
     if (currentRoute === "mapa-agentes") {
       return <MapaAgentesView />;
     }
-    if (currentRoute === "oportunidades") {
+    if (currentRoute === "oportunidades" || currentRoute === "oportunidade-detail") {
       return <OportunidadesView />;
     }
     if (currentRoute === "tarefas") {

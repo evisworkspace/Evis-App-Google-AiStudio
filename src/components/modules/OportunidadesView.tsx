@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { Oportunidade } from "../../types";
 import { softDeleteOportunidade, updateOportunidade } from "../../services/oportunidadeService";
@@ -29,12 +29,11 @@ import {
 } from "lucide-react";
 
 export default function OportunidadesView() {
-  const { oportunidades, setOportunidades, addOportunidade, showToast, companyId } = useApp();
+  const { oportunidades, setOportunidades, addOportunidade, showToast, companyId, navigate, selectedOportunidadeId, setSelectedOportunidadeId } = useApp();
   const [filterText, setFilterText] = useState("");
   const [viewMode, setViewMode] = useState<"lista" | "quadro">("quadro");
   const [isAdding, setIsAdding] = useState(false);
   const [activeStagePreset, setActiveStagePreset] = useState<Oportunidade["stage"]>("Proposta");
-  const [selectedOportunidadeId, setSelectedOportunidadeId] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -226,14 +225,43 @@ export default function OportunidadesView() {
     0
   );
 
+  const openOportunidadeDetail = (id: string) => {
+    setSelectedOportunidadeId(id);
+    navigate("oportunidade-detail");
+  };
+
+  const closeOportunidadeDetail = () => {
+    setSelectedOportunidadeId(null);
+    navigate("oportunidades");
+  };
+
+  // Limpa o selectedId se a oportunidade não existir mais no estado (ex: após deleção)
+  useEffect(() => {
+    if (selectedOportunidadeId) {
+      const exists = oportunidades.some((o) => o.id === selectedOportunidadeId);
+      if (!exists && oportunidades.length > 0) {
+        setSelectedOportunidadeId(null);
+        navigate("oportunidades");
+      }
+    }
+  }, [navigate, selectedOportunidadeId, setSelectedOportunidadeId, oportunidades]);
+
   if (selectedOportunidadeId) {
     const op = oportunidades.find((o) => o.id === selectedOportunidadeId);
     if (op) {
       return (
         <OportunidadeDetail
           oportunidade={op}
-          onBack={() => setSelectedOportunidadeId(null)}
+          onBack={closeOportunidadeDetail}
         />
+      );
+    }
+    // Enquanto as oportunidades ainda estão carregando (array vazio), mostra loading
+    if (oportunidades.length === 0) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <span className="animate-spin h-6 w-6 border-2 border-primary/30 border-t-primary rounded-full" />
+        </div>
       );
     }
   }
@@ -410,7 +438,7 @@ export default function OportunidadesView() {
                     return (
                       <tr
                         key={op.id}
-                        onClick={() => setSelectedOportunidadeId(op.id)}
+                        onClick={() => openOportunidadeDetail(op.id)}
                         className="hover:bg-zinc-50/50 cursor-pointer transition-colors group"
                       >
                         <td className="py-3 px-4 text-xs font-mono text-zinc-400 text-center">{idx + 1}</td>
@@ -509,7 +537,22 @@ export default function OportunidadesView() {
                           return (
                             <div
                               key={op.id}
-                              onClick={() => setSelectedOportunidadeId(op.id)}
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                // Só abre o detalhe se o clique não veio de um controle interno
+                                const target = e.target as HTMLElement;
+                                const isControl = target.closest('button, input[type="range"]');
+                                if (!isControl) {
+                                  openOportunidadeDetail(op.id);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  openOportunidadeDetail(op.id);
+                                }
+                              }}
                               className={`bg-white rounded-xl p-4.5 border border-zinc-200/80 shadow-2xs transition-all duration-300 relative overflow-hidden group/card cursor-pointer ${border} ${glow}`}
                             >
                               {/* Animated "Hot Lead/Alta Probabilidade" active badge */}
@@ -702,8 +745,8 @@ export default function OportunidadesView() {
                   type="button"
                   onClick={() => setAddMethod("manual")}
                   className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${addMethod === "manual"
-                      ? "bg-white text-zinc-950 border border-zinc-200/50 shadow-xs"
-                      : "text-zinc-500 hover:text-zinc-800"
+                    ? "bg-white text-zinc-950 border border-zinc-200/50 shadow-xs"
+                    : "text-zinc-500 hover:text-zinc-800"
                     }`}
                 >
                   Ficha Manual
@@ -712,8 +755,8 @@ export default function OportunidadesView() {
                   type="button"
                   onClick={() => setAddMethod("ai")}
                   className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${addMethod === "ai"
-                      ? "bg-white text-[hsl(var(--color-primary))] border border-zinc-200/50 shadow-xs"
-                      : "text-zinc-500 hover:text-zinc-800"
+                    ? "bg-white text-[hsl(var(--color-primary))] border border-zinc-200/50 shadow-xs"
+                    : "text-zinc-500 hover:text-zinc-800"
                     }`}
                 >
                   <Sparkles className="h-3.5 w-3.5 text-primary" /> Extrair com IA ✨

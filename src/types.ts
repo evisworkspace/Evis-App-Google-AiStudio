@@ -99,6 +99,7 @@ export interface Task {
 export type MenuRoute =
   | "dashboard"
   | "oportunidades"
+  | "oportunidade-detail"
   | "obras"
   | "obra-detail"
   | "tarefas"
