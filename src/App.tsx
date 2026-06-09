@@ -10,6 +10,8 @@ import ComprasView from "./components/modules/ComprasView";
 import TarefasView from "./components/modules/TarefasView";
 import WorkspaceView from "./components/modules/WorkspaceView";
 import AdminView from "./components/modules/AdminView";
+import MapaAgentesView from "./components/modules/MapaAgentesView";
+import WhatsAppDrawer from "./components/modules/WhatsAppDrawer";
 import EvisChat from "./components/assistente/EvisChat";
 import ToastContainer from "./components/layout/ToastContainer";
 import { motion, AnimatePresence } from "motion/react";
@@ -17,7 +19,7 @@ import AuthScreen from "./components/layout/AuthScreen";
 import OnboardingScreen from "./components/layout/OnboardingScreen";
 
 function AppContent() {
-  const { currentRoute, sidebarOpen, navigate, currentUser, authLoading, needsOnboarding, setCompanyId, setNeedsOnboarding } = useApp();
+  const { currentRoute, navigate, currentUser, authLoading, isWhatsAppOpen, setIsWhatsAppOpen, needsOnboarding, setCompanyId, setNeedsOnboarding } = useApp();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -50,8 +52,11 @@ function AppContent() {
     if (currentRoute === "dashboard") {
       return <DashboardView />;
     }
-    if (currentRoute === "obras") {
+    if (currentRoute === "obras" || currentRoute === "obra-detail") {
       return <ObrasView />;
+    }
+    if (currentRoute === "mapa-agentes") {
+      return <MapaAgentesView />;
     }
     if (currentRoute === "oportunidades") {
       return <OportunidadesView />;
@@ -129,6 +134,9 @@ function AppContent() {
 
         {/* Smart AI Assistente Floating Widget */}
         <EvisChat />
+
+        {/* Omnichannel CRM WhatsApp Drawer Overlay */}
+        <WhatsAppDrawer isOpen={isWhatsAppOpen} onClose={() => setIsWhatsAppOpen(false)} />
 
         {/* Floating System-wide Toasts Feedback Wrapper */}
         <ToastContainer />
