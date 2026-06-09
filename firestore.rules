@@ -2,47 +2,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Função auxiliar: verifica se o usuário está autenticado
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Função auxiliar: verifica se o usuário é membro ativo da empresa
     function isMemberOf(companyId) {
       return isSignedIn()
         && exists(/databases/$(database)/documents/companies/$(companyId)/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/companies/$(companyId)/users/$(request.auth.uid)).data.isActive == true;
     }
 
-    // Função auxiliar: verifica se o usuário é owner ou admin da empresa
     function isAdminOf(companyId) {
       return isMemberOf(companyId)
         && (get(/databases/$(database)/documents/companies/$(companyId)/users/$(request.auth.uid)).data.role == "owner"
         || get(/databases/$(database)/documents/companies/$(companyId)/users/$(request.auth.uid)).data.role == "admin");
     }
 
-    // Regra raiz: sem acesso a /companies diretamente (apenas via subcollection)
     match /companies/{companyId} {
       allow read: if isMemberOf(companyId);
-      allow create: if isSignedIn(); // criação no onboarding
+      allow create: if isSignedIn();
       allow update: if isAdminOf(companyId);
-      allow delete: if false; // nunca deletar empresa
+      allow delete: if false;
 
-      // Subcollection de usuários da empresa
       match /users/{userId} {
         allow read: if isMemberOf(companyId);
         allow write: if isAdminOf(companyId) || (isSignedIn() && request.auth.uid == userId);
       }
 
-      // Todas as outras subcollections seguem a regra do membro
       match /{collection}/{docId} {
         allow read: if isMemberOf(companyId);
         allow create: if isMemberOf(companyId);
         allow update: if isMemberOf(companyId);
-        allow delete: if false; // soft delete apenas  nunca deletar fisicamente
+        allow delete: if false;
       }
 
-      // Subcollections aninhadas (obras/{obraId}/tasks, etc.)
       match /{collection}/{docId}/{subcollection}/{subdocId} {
         allow read: if isMemberOf(companyId);
         allow create: if isMemberOf(companyId);
@@ -51,7 +44,6 @@ service cloud.firestore {
       }
     }
 
-    // Negar tudo mais
     match /{document=**} {
       allow read, write: if false;
     }
