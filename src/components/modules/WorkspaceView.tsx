@@ -172,7 +172,7 @@ export default function WorkspaceView() {
 
   if (!token) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
@@ -190,6 +190,29 @@ export default function WorkspaceView() {
           }
         }} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold font-sans rounded-lg transition-colors cursor-pointer">
           Conectar Workspace
+        </button>
+      </motion.div>
+    );
+  }
+
+  if (!project.id) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col items-center justify-center p-12 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 mt-8"
+      >
+        <Building2 className="h-12 w-12 text-zinc-300 mb-4" />
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 font-sans">Nenhuma obra selecionada</h2>
+        <p className="text-sm text-zinc-500 mb-6 max-w-md text-center">
+          Selecione uma obra no menu lateral para acessar o Workspace operacional com ficha, equipe e tarefas da obra.
+        </p>
+        <button
+          onClick={() => setCurrentRoute("obras")}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold font-sans rounded-lg transition-colors cursor-pointer"
+        >
+          Ver Obras
         </button>
       </motion.div>
     );
@@ -226,7 +249,7 @@ export default function WorkspaceView() {
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                PRÓX. ENTREGA: 15 AGO
+                PRÓX. ENTREGA: {project.endDate ? new Date(project.endDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase() : '—'}
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white border ${project.status === "Em Andamento" ? 'bg-indigo-600 border-indigo-700' : 'bg-emerald-600 border-emerald-700'}`}>
                 {project.status}
@@ -240,9 +263,8 @@ export default function WorkspaceView() {
             </h2>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 mt-2">
               <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {project.location.split(',')[0]}</span>
-              <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> Resp: Eng. {project.manager || "Evandro"}</span>
-              <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> Cliente: {project.type === "Refurbish" ? "Curitiba Corporate" : "João Pedro Silva"}</span>
-              <span className="flex items-center gap-1"><Pickaxe className="h-3.5 w-3.5" /> Etapa: Superestrutura</span>
+              <span className="flex items-center gap-1"><User className="h-3.5 w-3.5" /> Resp: {project.manager || "—"}</span>
+              <span className="flex items-center gap-1"><Pickaxe className="h-3.5 w-3.5" /> Etapa: {project.status}</span>
             </div>
           </div>
           <div className="md:w-64 shrink-0 flex flex-col items-end justify-between">
@@ -345,25 +367,19 @@ export default function WorkspaceView() {
           </h4>
           
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-            {[
-              { name: project.manager || "Evandro (Eng)", role: "Resp. Técnico", status: "Online" },
-              { name: "Sérgio Almeida", role: "Mestre", status: "Na Obra" },
-              { name: project.type === "Refurbish" ? "Curitiba Corporate" : "João Pedro Silva", role: "Cliente", status: "Ausente" },
-              { name: "Votorantim", role: "Forn. Crítico", status: "Online" },
-            ].map((contact, idx) => (
+            {(project.equipe.length > 0 ? project.equipe : [{ name: project.manager || "—", role: "Responsável Técnico" }]).map((contact, idx) => (
               <div key={idx} className="flex items-center justify-between p-2 rounded-lg border border-zinc-100 dark:border-zinc-800/80 shrink-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                     {contact.name}
-                    <span className={`w-1.5 h-1.5 rounded-full ${contact.status === 'Online' ? 'bg-emerald-500' : contact.status === 'Na Obra' ? 'bg-amber-500' : 'bg-slate-300'}`} title={contact.status}></span>
                   </span>
                   <span className="text-[9px] font-bold uppercase tracking-wider mt-0.5 text-zinc-500">{contact.role}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setWappSelectedContact(`${contact.name} (${contact.role})`);
                     setActiveDrawer("whatsapp");
-                    showToast(`Conversa simulada com ${contact.name} carregada.`, "info");
+                    showToast(`Conversa iniciada com ${contact.name}.`, "info");
                   }}
                   className="h-7 w-7 rounded-full bg-white border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 hover:bg-[#25D366] hover:border-[#25D366] dark:hover:bg-[#25D366] text-zinc-400 hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-sm group-hover:scale-105"
                   title="Abrir Chat"
@@ -394,20 +410,22 @@ export default function WorkspaceView() {
                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{project.name}</p>
              </div>
              <div>
-               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Cliente / Contratante</p>
-               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">{project.type === "Refurbish" ? "Curitiba Corporate" : "João Pedro Silva"}</p>
+               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Responsável Técnico</p>
+               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">{project.manager || "—"}</p>
              </div>
              <div>
-               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">CPF / CNPJ</p>
-               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100 font-mono">042.894.229-10</p>
+               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Status</p>
+               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">{project.status}</p>
              </div>
              <div>
                <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Início / Previsão</p>
-               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">10/Jan/2026 - 15/Ago/2026</p>
+               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">
+                 {project.startDate ? new Date(project.startDate + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} — {project.endDate ? new Date(project.endDate + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+               </p>
              </div>
              <div>
-               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Área / Tipo</p>
-               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100">2.500 m² - {project.type}</p>
+               <p className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Descrição</p>
+               <p className="text-[11px] font-medium text-zinc-900 dark:text-zinc-100 line-clamp-2">{project.description || "—"}</p>
              </div>
           </div>
           <div className="bg-zinc-50 p-3 flex gap-2 z-10 border-t border-zinc-100 dark:bg-zinc-800/80 dark:border-zinc-800">

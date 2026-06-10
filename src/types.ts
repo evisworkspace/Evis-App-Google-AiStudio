@@ -110,6 +110,7 @@ export type MenuRoute =
   | "estoque"
   | "workspace"
   | "mapa-agentes"
+  | "maestro"
   | "financeiro-resumo"
   | "financeiro-receitas"
   | "financeiro-despesas"
@@ -125,9 +126,78 @@ export type MenuRoute =
   | "configuracoes-empresa"
   | "configuracoes-contas"
   | "configuracoes-equipe"
+  | "configuracoes-acervo"
+  | "acervo"
   | "planos";
 
+export type DateConfidence = "exact" | "estimated" | "unknown";
+export type AnalysisStatus = "unanalyzed" | "analyzed" | "error";
+
+export interface MemoryEvent {
+  id: string;
+  title: string;
+  content: string;
+  contentHash: string;
+  eventDate: string;
+  dateConfidence: DateConfidence;
+  dateSource: "filename" | "frontmatter" | "text" | "importedAt";
+  importedAt: string;
+  importRunId: string;
+  sourceFile: string;
+  origin: "markdown_import" | "manual";
+  analysisStatus: AnalysisStatus;
+  isDuplicate: boolean;
+  duplicateOfId?: string;
+  tags?: string[];
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
+}
+
+export interface ImportRunError {
+  filename: string;
+  error: string;
+}
+
+export interface ImportRun {
+  id: string;
+  startedAt: string;
+  finishedAt: string;
+  sourceType: "markdown_files";
+  fileCount: number;
+  successCount: number;
+  errorCount: number;
+  unknownDateCount: number;
+  duplicateCandidates: number;
+  errors: ImportRunError[];
+  createdEventIds: string[];
+}
+
 export type AppTheme = "claro" | "escuro" | "hibrido";
+
+export type MaestroSeverity = "info" | "alerta" | "critico";
+
+export interface AgentMessageAction {
+  id: string;
+  label: string;
+  route?: MenuRoute;
+}
+
+export interface AgentMessage {
+  id: string;
+  agentId: string;
+  agentName: string;
+  avatar: string; // cor do círculo do avatar (themeColor do agente)
+  scope: "global" | "obra";
+  obraId?: string;
+  severity: MaestroSeverity;
+  text: string;
+  actions: AgentMessageAction[];
+  timestamp: string; // ISO 8601
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
+}
 
 export const INITIAL_OBRAS: Obra[] = [
   {

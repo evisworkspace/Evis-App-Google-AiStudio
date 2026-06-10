@@ -11,6 +11,8 @@ import TarefasView from "./components/modules/TarefasView";
 import WorkspaceView from "./components/modules/WorkspaceView";
 import AdminView from "./components/modules/AdminView";
 import MapaAgentesView from "./components/modules/MapaAgentesView";
+import MaestroView from "./components/modules/MaestroView";
+import AcervoView from "./components/modules/AcervoView";
 import WhatsAppDrawer from "./components/modules/WhatsAppDrawer";
 import EvisChat from "./components/assistente/EvisChat";
 import ToastContainer from "./components/layout/ToastContainer";
@@ -58,6 +60,9 @@ function AppContent() {
     if (currentRoute === "mapa-agentes") {
       return <MapaAgentesView />;
     }
+    if (currentRoute === "maestro") {
+      return <MaestroView />;
+    }
     if (currentRoute === "oportunidades" || currentRoute === "oportunidade-detail") {
       return <OportunidadesView />;
     }
@@ -72,6 +77,9 @@ function AppContent() {
     }
     if (currentRoute.startsWith("financeiro-")) {
       return <FinanceiroView />;
+    }
+    if (currentRoute === "acervo") {
+      return <AcervoView />;
     }
     if (
       currentRoute.startsWith("cadastros-") ||

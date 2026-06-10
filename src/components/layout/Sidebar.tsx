@@ -28,6 +28,8 @@ import {
   Building,
   DollarSign,
   Bot,
+  MessagesSquare,
+  Archive,
   X
 } from "lucide-react";
 
@@ -77,6 +79,7 @@ export default function Sidebar() {
     { label: "Empresa", route: "configuracoes-empresa" as MenuRoute },
     { label: "Contas Bancárias", route: "configuracoes-contas" as MenuRoute },
     { label: "Equipe de Engenharia", route: "configuracoes-equipe" as MenuRoute },
+    { label: "Acervo & Backup", route: "configuracoes-acervo" as MenuRoute },
   ];
 
   return (
@@ -197,6 +200,18 @@ export default function Sidebar() {
                 <span>Central de Agentes IA</span>
               </div>
             </button>
+            <button
+              onClick={() => navigate("maestro")}
+              className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${currentRoute === "maestro"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <MessagesSquare className={`h-4 w-4 ${currentRoute === "maestro" ? "text-purple-600" : "text-purple-500"}`} />
+                <span>Maestro Operacional</span>
+              </div>
+            </button>
           </div>
 
           {/* Group: Financeiro (9 items, collapsible) */}
@@ -230,6 +245,24 @@ export default function Sidebar() {
                 })}
               </div>
             )}
+          </div>
+
+          {/* Group: Acervo Pessoal */}
+          <div className="space-y-1">
+            <span className="px-3 text-[10px] font-mono font-bold text-sidebar-muted uppercase tracking-wider block mb-1">
+              Arquivo Pessoal
+            </span>
+            <button
+              onClick={() => navigate("acervo")}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-md transition-all duration-200 cursor-pointer transform hover:translate-x-1 ${
+                currentRoute === "acervo"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              }`}
+            >
+              <Archive className={`h-4 w-4 ${currentRoute === "acervo" ? "text-primary" : "text-sidebar-muted"}`} />
+              Acervo Pessoal
+            </button>
           </div>
 
           {/* Group: Admin & Cadastros */}
