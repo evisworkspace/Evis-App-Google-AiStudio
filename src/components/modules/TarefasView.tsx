@@ -162,12 +162,12 @@ export default function TarefasView() {
             </p>
             <div className="flex gap-3">
                <button className="text-[10px] font-bold px-3 py-1.5 bg-sky-600 text-white rounded hover:bg-sky-700 cursor-pointer shadow-sm transition-all"
-                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                  onClick={() => showToast("Em desenvolvimento", "info")}
                >
                  Aprovar e Auto-disparar Checklists
                </button>
                <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-sky-200 text-sky-700 rounded hover:bg-sky-50 cursor-pointer shadow-sm transition-all"
-                  onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                  onClick={() => showToast("Em desenvolvimento", "info")}
                >
                  Ver prévia dos lembretes simulados
                </button>

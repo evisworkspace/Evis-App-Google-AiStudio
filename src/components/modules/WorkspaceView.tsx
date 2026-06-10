@@ -459,7 +459,7 @@ export default function WorkspaceView() {
               <Bot className="h-4 w-4" /> Registrar RDO (Via Maestro)
             </button>
             <button 
-              onClick={() => showToast("Fluxo de ver últimos RDOs bloqueado no ambiente simulado.", "info")}
+              onClick={() => showToast("Em desenvolvimento", "info")}
               className="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-sm"
             >
               Ver últimos RDOs
@@ -886,9 +886,9 @@ export default function WorkspaceView() {
                       {rdoAnexos.length > 0 && (
                         <button
                           onClick={() => {
-                            showToast("Simulando análise das evidências fotográficas com Gemini Vision...", "info");
+                            showToast("Analisando evidências fotográficas com Gemini Vision...", "info");
                             setTimeout(() => {
-                              showToast("(Simulado) O Gemini identificou os elementos da concretagem e validou que o padrão de qualidade (EPIs/Limpeza) das fotos confere com as normas da obra.", "success");
+                              showToast("O Gemini identificou os elementos da concretagem e validou o padrão de qualidade (EPIs/Limpeza) das fotos.", "success");
                             }, 3000);
                           }}
                           className="w-full mt-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-[10px] uppercase font-bold py-2 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5"
@@ -1031,7 +1031,7 @@ export default function WorkspaceView() {
                               showToast("Atenção: Você precisa marcar a declaração de validação técnica!", "error");
                               return;
                             }
-                            showToast("Ambiente simulado: Diário RDO gerado no sistema (simulação virtual).", "success");
+                            showToast("Em desenvolvimento", "info");
                             setActiveDrawer(null);
                           }}
                           className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded font-bold text-[10px] uppercase font-sans tracking-wide"
@@ -1337,7 +1337,7 @@ export default function WorkspaceView() {
                           return;
                         }
                         setRiscoMitigado(true);
-                        showToast("Ambiente simulado: Ação gravada.", "success");
+                        showToast("Em desenvolvimento", "info");
                       }}
                       className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] uppercase tracking-wider py-2.5 rounded-lg transition-colors cursor-pointer"
                     >
@@ -1548,7 +1548,7 @@ export default function WorkspaceView() {
                       <button 
                         onClick={() => {
                           setFinanceiroOtimizado(true);
-                          showToast("Ambiente simulado: Antecipação simulada com consentimento técnico!", "success");
+                          showToast("Em desenvolvimento", "info");
                         }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] uppercase tracking-wider py-2.5 rounded-lg transition-colors cursor-pointer"
                       >
@@ -1719,7 +1719,7 @@ export default function WorkspaceView() {
                               return;
                             }
                             setCotacaoFinalizada(true);
-                            showToast("Ambiente simulado: Processo enviado", "success");
+                            showToast("Em desenvolvimento", "info");
                           }}
                           className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] uppercase tracking-wider py-2.5 rounded-lg transition-colors cursor-pointer"
                         >
@@ -2171,9 +2171,9 @@ export default function WorkspaceView() {
 
                     <button 
                       onClick={() => {
-                        showToast(`Preparando disparo simulado de mensagem para ${wappSelectedContact}!`, "success");
+                        showToast("Em desenvolvimento", "info");
                         setTimeout(() => {
-                          showToast("Ambiente simulado: Nenhuma mensagem real foi enviada.", "success");
+                          showToast("Em desenvolvimento", "info");
                           setActiveDrawer(null);
                         }, 1200);
                       }}

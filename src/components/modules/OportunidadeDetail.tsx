@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
-  const { setOportunidades, setObras, showToast, companyId, setSelectedProjectId } = useApp();
+  const { setOportunidades, setObras, showToast, companyId, setSelectedProjectId, navigate } = useApp();
   const [activeTab, setActiveTab] = useState<"geral" | "orcamento" | "tarefas" | "arquivos" | "propostas">("geral");
 
   // Orçamentista IA Chat States (moved exactly from ObrasView)
@@ -217,8 +217,8 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
       setObras(prev => [...prev, obraCriada]);
       setOportunidades(prev => prev.filter(o => o.id !== oportunidade.id));
       setSelectedProjectId(obraCriada.id);
-      showToast(`"${oportunidade.title}" virou obra no Firestore.`, "success");
-      onBack();
+      showToast(`"${oportunidade.title}" virou obra com sucesso.`, "success");
+      navigate("obra-detail");
     } catch (error: any) {
       showToast(`Erro ao converter oportunidade em obra: ${error.message}`, "error");
     } finally {
@@ -317,12 +317,12 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
             </p>
             <div className="mt-4 flex gap-3">
               <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-all cursor-pointer shadow-sm"
-                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                onClick={() => showToast("Em desenvolvimento", "info")}
               >
                 Preparar briefing para orçamento
               </button>
               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 transition-all cursor-pointer shadow-sm"
-                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                onClick={() => showToast("Em desenvolvimento", "info")}
               >
                 Ver contexto de risco da conta
               </button>
@@ -386,7 +386,7 @@ export default function OportunidadeDetail({ oportunidade, onBack }: Props) {
               <button onClick={() => setIsOrcamentistaOpen(!isOrcamentistaOpen)} className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
                 Ativar Simulador de Custos
               </button>
-              <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+              <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
                 Enviar perguntas pendentes ao cliente
               </button>
             </div>

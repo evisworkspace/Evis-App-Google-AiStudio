@@ -113,7 +113,7 @@ export default function ObrasView() {
     addRdo(obra.id, rdoWeather, parseInt(rdoWorkers) || 40, rdoProgress, rdoObservations);
     setRdoProgress("");
     setRdoObservations("");
-    showToast("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.", "success");
+    showToast("Em desenvolvimento", "info");
   };
 
   const handleCreateMedicao = (e: React.FormEvent) => {
@@ -125,7 +125,7 @@ export default function ObrasView() {
     setMedicaoAmount("");
     setMedicaoDesc("");
     setIsRequestingMedicao(false);
-    showToast("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.", "success");
+    showToast("Em desenvolvimento", "info");
   };
 
   const handleSelectObra = (id: string) => {
@@ -678,10 +678,10 @@ export default function ObrasView() {
                    Há desvio entre planejado e realizado. Esta etapa impacta o caminho crítico: <strong className="underline decoration-teal-300 cursor-pointer text-teal-900">A superestrutura do 7º ao 15º pavimento está com 12 dias de atraso projetado</strong>. Posso simular um novo cenário sem alterar o cronograma oficial.
                 </p>
                 <div className="flex gap-3">
-                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
                      Simular Replanejamento
                    </button>
-                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-teal-200 text-teal-700 hover:bg-teal-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
                      Ver Caminho Crítico
                    </button>
                 </div>
@@ -870,7 +870,7 @@ export default function ObrasView() {
                    Publicar diário exige confirmação humana.
                 </p>
                 <div className="flex gap-3">
-                   <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-orange-600 text-white hover:bg-orange-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                   <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-orange-600 text-white hover:bg-orange-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
                      Publicação Simulada (Rascunho RDO)
                    </button>
                 </div>
@@ -1386,7 +1386,7 @@ export default function ObrasView() {
                       type="button"
                       onClick={() => {
                         setProjectTeam(prev => prev.filter(t => t.name !== eq.name));
-                        alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+                        showToast("Em desenvolvimento", "info");
                       }}
                       className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer transition-colors"
                       title="Remover do Projeto"
@@ -1411,7 +1411,7 @@ export default function ObrasView() {
                   const newMember = { name: newTeamName, role: newTeamRole };
                   setProjectTeam(prev => [...prev, newMember]);
                   setNewTeamName("");
-                  alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+                  showToast("Em desenvolvimento", "info");
                 }}
                 className="space-y-4 text-xs text-left"
               >
@@ -1512,7 +1512,7 @@ export default function ObrasView() {
                         date: new Date().toISOString().split("T")[0]
                       };
                       setProjectDocs(prev => [newD, ...prev]);
-                      alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+                      showToast("Em desenvolvimento", "info");
                     }
                   }}
                   className="p-6 border-2 border-dashed border-zinc-200 rounded-lg text-center hover:border-[hsl(var(--color-primary))] cursor-pointer transition-colors bg-zinc-50/50"

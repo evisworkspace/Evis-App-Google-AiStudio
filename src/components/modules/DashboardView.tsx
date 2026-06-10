@@ -748,8 +748,7 @@ export default function DashboardView() {
                 </button>
                 <button
                   onClick={() => {
-                    const { showToast } = useApp(); // Access showToast context on the fly
-                    showToast(`Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.`, "success");
+                    showToast("Em desenvolvimento", "info");
                     setLogHoursOpen(false);
                   }}
                   className="flex-1 py-2 bg-primary text-primary-foreground hover:opacity-90 font-sans font-semibold text-xs rounded cursor-pointer transition-all"

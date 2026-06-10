@@ -394,12 +394,12 @@ export default function OportunidadesView() {
         </p>
         <div className="flex gap-3">
           <button className="text-[10px] font-bold px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 cursor-pointer shadow-sm transition-all"
-            onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+            onClick={() => showToast("Em desenvolvimento", "info")}
           >
             Preparar briefing para orçamento
           </button>
           <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-purple-200 text-purple-700 rounded hover:bg-purple-50 cursor-pointer shadow-sm transition-all"
-            onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+            onClick={() => showToast("Em desenvolvimento", "info")}
           >
             Gerar rascunho de engajamento (Gmail)
           </button>

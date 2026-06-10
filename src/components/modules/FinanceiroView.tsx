@@ -62,7 +62,7 @@ export default function FinanceiroView() {
 
     setNewDesc("");
     setNewAmount("");
-    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+    showToast("Lançamento registrado com sucesso.", "success");
   };
 
   const handleTransfer = (e: React.FormEvent) => {
@@ -86,7 +86,7 @@ export default function FinanceiroView() {
     addLancamento(`Transferência: Entrada vinda de ${source?.name}`, parsed, "receita", "Transferência", toAcc);
 
     setTransferAmount("");
-    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+    showToast("Transferência entre contas realizada.", "success");
   };
 
   const deleteTransaction = (id: string) => {
@@ -120,12 +120,12 @@ export default function FinanceiroView() {
             </p>
             <div className="mt-3 flex gap-3">
               <button className="text-[10px] font-bold px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-all cursor-pointer rounded shadow-sm"
-                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                onClick={() => showToast("Análise de impacto do Kairo em preparação.", "info")}
               >
                 Analisar impactos do Kairo
               </button>
               <button className="text-[10px] font-bold px-3 py-1.5 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-all cursor-pointer rounded shadow-sm"
-                onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")}
+                onClick={() => showToast("Projeção de 30 dias em preparação.", "info")}
               >
                 Simular projeção (30 dias)
               </button>

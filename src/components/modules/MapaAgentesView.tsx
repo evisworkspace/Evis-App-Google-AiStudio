@@ -164,7 +164,7 @@ const agents: AgentDef[] = [
 type PlanType = "Essencial" | "Profissional" | "Premium";
 
 export default function MapaAgentesView() {
-  const { isWhatsAppOpen } = useApp();
+  const { isWhatsAppOpen, showToast } = useApp();
   const [currentPlan, setCurrentPlan] = useState<PlanType>("Profissional");
   const [filter, setFilter] = useState<"Todos" | "Ativos" | "Disponíveis" | "Bloqueados">("Todos");
 
@@ -352,19 +352,19 @@ export default function MapaAgentesView() {
                   <div className="p-3 bg-white dark:bg-zinc-900 flex gap-2 border-t border-slate-100 dark:border-zinc-800">
                      {status === "Ativo" || status === "Incluído no Premium" ? (
                        <>
-                         <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="flex-1 bg-white hover:bg-zinc-50 border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer">
+                         <button onClick={() => showToast("Em desenvolvimento", "info")} className="flex-1 bg-white hover:bg-zinc-50 border border-zinc-200 dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer">
                            Ver contexto
                          </button>
-                         <button onClick={() => alert('Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.')} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer">
+                         <button onClick={() => showToast("Em desenvolvimento", "info")} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer">
                            Simular ação
                          </button>
                        </>
                      ) : status === "Add-on disponível" ? (
-                       <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/40 text-amber-800 dark:text-amber-400 text-[10px] uppercase tracking-wider font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1">
+                       <button onClick={() => showToast("Em desenvolvimento", "info")} className="w-full bg-amber-50 hover:bg-amber-100 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/40 text-amber-800 dark:text-amber-400 text-[10px] uppercase tracking-wider font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1">
                          <Sparkles className="h-3 w-3" /> Ativar Add-on
                        </button>
                      ) : (
-                       <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-zinc-800 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 text-[10px] uppercase tracking-wider font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1">
+                       <button onClick={() => showToast("Em desenvolvimento", "info")} className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-zinc-800 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 text-[10px] uppercase tracking-wider font-bold py-1.5 rounded transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-1">
                          Fazer Upgrade
                        </button>
                      )}

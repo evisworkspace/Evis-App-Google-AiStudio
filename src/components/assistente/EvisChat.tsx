@@ -220,7 +220,7 @@ export default function EvisChat() {
   }, [agentMessages, isOpen, activeChatId]);
 
   const handleAction = (actionStr: string, msgId: string) => {
-    showToast(`Ambiente simulado: Ação confirmada via Hub. Nenhuma rotina real acionada.`, "success");
+    showToast("Em desenvolvimento", "info");
     setAgentMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: "simulada" } : m));
   };
 

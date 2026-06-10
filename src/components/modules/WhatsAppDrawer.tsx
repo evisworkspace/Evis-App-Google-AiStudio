@@ -325,7 +325,7 @@ export default function WhatsAppDrawer({ isOpen, onClose }: WhatsAppDrawerProps)
         project: project.id
       };
       setTasks(prev => [newTask, ...prev]);
-      showToast(`Ambiente simulado: Nenhuma ação real. Tarefa '${newTask.title}' simulada!`, "success");
+      showToast("Em desenvolvimento", "info");
     } else {
       showToast(`Ação registrada: ${aiAnalysis.actionRequired}`, "info");
     }

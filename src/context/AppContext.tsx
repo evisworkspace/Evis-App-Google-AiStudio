@@ -4,6 +4,7 @@ import type { User } from "firebase/auth";
 import { auth } from "../lib/auth";
 import { createOportunidade, getOportunidades } from "../services/oportunidadeService";
 import { getObras, updateObra } from "../services/obraService";
+import { getLancamentos, createLancamento } from "../services/financeiroService";
 import {
   Obra,
   Oportunidade,
@@ -165,7 +166,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [obras, setObras] = useState<Obra[]>([]);
   const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
   const [accounts, setAccounts] = useState<BankAccount[]>(INITIAL_ACCOUNTS);
-  const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>(INITIAL_LANCAMENTOS);
+  const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>([]);
   const [purchases, setPurchases] = useState<PurchaseOrder[]>(INITIAL_PURCHASES);
   const [insumos, setInsumos] = useState<Insumo[]>(INITIAL_INSUMOS);
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
@@ -182,15 +183,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const loadFirestoreData = async () => {
       try {
-        const [loadedObras, loadedOportunidades] = await Promise.all([
+        const [loadedObras, loadedOportunidades, loadedLancamentos] = await Promise.all([
           getObras(companyId),
           getOportunidades(companyId),
+          getLancamentos(companyId),
         ]);
 
         if (cancelled) return;
 
         setObras(loadedObras);
         setOportunidades(loadedOportunidades);
+        setLancamentos(loadedLancamentos);
         setSelectedProjectId((current) => {
           if (current && loadedObras.some((obra) => obra.id === current)) return current;
           return loadedObras[0]?.id || "";
@@ -291,6 +294,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setLancamentos((prev) => [newLancamento, ...prev]);
+
+    if (companyId) {
+      createLancamento(companyId, newLancamento).catch((error) => {
+        console.error("Erro ao persistir lançamento:", error);
+      });
+    }
 
     // Update corresponding Bank Account balance automatically
     setAccounts((prevAccounts) =>

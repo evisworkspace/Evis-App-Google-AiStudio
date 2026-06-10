@@ -52,6 +52,9 @@ export interface LancamentoFinanceiro {
   bankAccount: string;
   status: "Realizado" | "Pendente";
   project?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  deletedAt?: unknown;
 }
 
 export interface BankAccount {

@@ -26,7 +26,7 @@ import {
 type ComprasTab = "panorama" | "solicitacoes" | "cotacoes" | "ordens" | "historico" | "estoque";
 
 export default function ComprasView() {
-  const { currentRoute, obras, purchases, setPurchases, getActiveProject } = useApp();
+  const { currentRoute, obras, purchases, setPurchases, getActiveProject, showToast } = useApp();
   const [comprasTab, setComprasTab] = useState<ComprasTab>("panorama");
   const [itemSearch, setItemSearch] = useState("");
   const activeObra = getActiveProject();
@@ -83,7 +83,7 @@ export default function ComprasView() {
     setSolicitacoes([newSc, ...solicitacoes]);
     setNewScItem("");
     setNewScQty("");
-    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+    showToast("Em desenvolvimento", "info");
   };
 
   const handleApproveQuote = (optName: string, price: number) => {
@@ -103,7 +103,7 @@ export default function ComprasView() {
     };
 
     setPurchases((prev) => [newPo, ...prev]);
-    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+    showToast("Em desenvolvimento", "info");
   };
 
   const executeRestock = (id: string, name: string) => {
@@ -114,7 +114,7 @@ export default function ComprasView() {
       }
       return item;
     }));
-    alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+    showToast("Em desenvolvimento", "info");
   };
 
 
@@ -176,10 +176,10 @@ export default function ComprasView() {
                  Além disso, notei uma variação de preço (+3%) na última previsão do SINAPI; esta variação pode afetar a margem.
               </p>
               <div className="flex gap-3">
-                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                 <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 transition-colors uppercase rounded shadow-sm cursor-pointer">
                    Analisar Variação de Preço
                  </button>
-                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
+                 <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors uppercase rounded shadow-sm cursor-pointer">
                    Investigar consumo atípico
                  </button>
               </div>
@@ -437,10 +437,10 @@ export default function ComprasView() {
                  Há também uma <span className="font-bold underline cursor-pointer text-fuchsia-800">Compra Crítica iminente</span> (Aço Estrutural CA-50 em Batel). Esta solicitação impacta o caminho crítico. Emitir compra exige aprovação.
               </p>
               <div className="flex gap-3">
-                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-fuchsia-600 text-white hover:bg-fuchsia-700 transition-colors rounded shadow-sm cursor-pointer">
+                 <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-fuchsia-600 text-white hover:bg-fuchsia-700 transition-colors rounded shadow-sm cursor-pointer">
                    Comparativo de Fornecedores
                  </button>
-                 <button onClick={() => alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50 transition-colors rounded shadow-sm cursor-pointer">
+                 <button onClick={() => showToast("Em desenvolvimento", "info")} className="text-[10px] font-bold px-3 py-1.5 bg-white border border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50 transition-colors rounded shadow-sm cursor-pointer">
                    Tratar Compra Crítica (Aço CA-50)
                  </button>
               </div>
@@ -544,7 +544,7 @@ export default function ComprasView() {
                       <button
                         onClick={() => {
                           setPurchases(prev => prev.filter(p => p.id !== po.id));
-                          alert("Ambiente simulado: a IA recomenda, o humano confirma e nenhuma ação real é executada nesta fase.");
+                          showToast("Em desenvolvimento", "info");
                         }}
                         className="px-2 py-1 text-[9.5px] text-zinc-500 bg-zinc-50 hover:bg-rose-50 hover:text-rose-600 border border-zinc-200 hover:border-rose-100 rounded cursor-pointer transition-colors font-mono"
                       >
